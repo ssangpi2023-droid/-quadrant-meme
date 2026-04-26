@@ -413,7 +413,9 @@ input[type="text"]::placeholder, textarea::placeholder {
   border-top-color: var(--ink);
 }
 .char-tag:hover .char-tag-actions,
-.char-tag.show-actions .char-tag-actions {
+.char-tag.show-actions .char-tag-actions,
+.modal-char-tag.editable:hover .char-tag-actions,
+.modal-char-tag.editable.show-actions .char-tag-actions {
   opacity: 1;
   pointer-events: auto;
 }
@@ -876,18 +878,7 @@ input[type="text"]::placeholder, textarea::placeholder {
 .modal-char-tag.editable {
   pointer-events: auto;
   cursor: grab;
-  overflow: visible; /* 팝업이 밖으로 나올 수 있게 */
-}
-/* 수정/삭제 팝업 - modal 태그용 */
-.modal-char-tag.editable .char-tag-actions {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s;
-}
-.modal-char-tag.editable:hover .char-tag-actions,
-.modal-char-tag.editable.show-actions .char-tag-actions {
-  opacity: 1;
-  pointer-events: auto;
+  overflow: visible;
 }
 /* 이름 수정 wrap - modal 태그용 */
 .modal-char-tag .char-tag-rename-wrap {
@@ -1041,7 +1032,8 @@ input[type="text"]::placeholder, textarea::placeholder {
 
   /* char-tag hover → tap으로 대체 (모바일) */
   .char-tag-actions { opacity: 0; pointer-events: none; }
-  .char-tag.show-actions .char-tag-actions { opacity: 1; pointer-events: auto; }
+  .char-tag.show-actions .char-tag-actions,
+  .modal-char-tag.editable.show-actions .char-tag-actions { opacity: 1; pointer-events: auto; }
 
   /* 수정/완료 버튼 크게 */
   .q-btn { font-size: 13px; padding: 8px 16px; }
