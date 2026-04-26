@@ -1998,6 +1998,7 @@ function makeDraggable(el, container) {
       onMove._raf = requestAnimationFrame(() => {
         const tagW = el.offsetWidth;
         const tagH = el.offsetHeight;
+        // 태그는 left/top 좌상단 기준 (transform 없음)
         const maxL = ((rect.width - tagW) / rect.width) * 100;
         const maxT = ((rect.height - tagH) / rect.height) * 100;
         const dx = ((mx - ox) / rect.width) * 100;
@@ -2241,19 +2242,20 @@ let modalEditChars = []; // 수정 중 임시 캐릭터 목록
 function openModal(idx) {
   viewingIdx = idx;
   const s = saved[idx];
+  if (!s) return;
+  const entryKey = s._key || String(s.id);
+
   document.getElementById('modalTheme').textContent = s.theme;
   document.getElementById('modalAuthor').textContent = s.author + '  ·  ' + (s.date || '');
-  // 설명 표시
   const descEl = document.getElementById('modalDesc');
   if (descEl) {
     descEl.textContent = s.desc || '';
     descEl.style.display = s.desc ? 'block' : 'none';
   }
 
-  // 수정 패널 숨기기
   document.getElementById('modalEditPanel').style.display = 'none';
+  resetDeletePanel();
 
-  // 사분면 텍스트 패널
   const panels = { q1: 'modal-q1', q2: 'modal-q2', q3: 'modal-q3', q4: 'modal-q4' };
   Object.entries(panels).forEach(([key, elId]) => {
     const el = document.getElementById(elId);
@@ -2269,14 +2271,13 @@ function openModal(idx) {
 
   renderModalChars(s.chars || []);
 
-  // 푸터: 수정하기 + 삭제 버튼
   const footer = document.getElementById('modalFooter');
-  const editBtn = `<button class="q-btn edit" onclick="enterModalEditMode(${idx})">캐릭터 추가 / 삭제하기</button>`;
+  footer.style.display = '';
+  const editBtn = `<button class="q-btn edit" onclick="enterModalEditModeByKey('${entryKey}')">캐릭터 추가 / 삭제하기</button>`;
   const delBtn = s.author === currentUser
     ? `<button class="btn btn-danger" style="font-size:12px;padding:6px 14px;" onclick="deleteStep1()">이 사분면 삭제</button>`
     : '';
   footer.innerHTML = `<div style="display:flex;gap:8px;justify-content:flex-end;">${editBtn}${delBtn}</div>`;
-  resetDeletePanel();
 
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -2291,8 +2292,10 @@ function renderModalChars(chars) {
     tag.textContent = c.name;
     tag.style.background = c.color || '#04D0FE';
     tag.style.color = getTextColor(c.color || '#04D0FE');
-    tag.style.left = (c.x || 50) + '%';
-    tag.style.top  = (c.y || 50) + '%';
+    const x = Math.min(95, Math.max(5, c.x || 50));
+    const y = Math.min(95, Math.max(5, c.y || 50));
+    tag.style.left = x + '%';
+    tag.style.top  = y + '%';
     quadWrap.appendChild(tag);
   });
 
@@ -2305,6 +2308,13 @@ function renderModalChars(chars) {
   } else {
     charsEl.innerHTML = '';
   }
+}
+
+function enterModalEditModeByKey(key) {
+  // key로 현재 saved 배열에서 최신 인덱스 찾기
+  const idx = saved.findIndex(s => (s._key || String(s.id)) === key);
+  if (idx === -1) return;
+  enterModalEditMode(idx);
 }
 
 function enterModalEditMode(idx) {
@@ -2333,37 +2343,72 @@ function renderModalEditChars() {
     tag.className = 'modal-char-tag editable';
     tag.style.background = c.color || '#04D0FE';
     tag.style.color = getTextColor(c.color || '#04D0FE');
-    tag.style.left = (c.x || 50) + '%';
-    tag.style.top  = (c.y || 50) + '%';
+    const x = Math.min(95, Math.max(5, c.x || 50));
+    const y = Math.min(95, Math.max(5, c.y || 50));
+    tag.style.left = x + '%';
+    tag.style.top  = y + '%';
 
+    // 이름 span
     const nameSpan = document.createElement('span');
+    nameSpan.className = 'char-name-span';
     nameSpan.textContent = c.name;
     tag.appendChild(nameSpan);
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'm-del-btn';
-    delBtn.textContent = '삭제';
-    delBtn.onmousedown = e => {
+    // 이름 수정 인라인
+    const renameWrap = document.createElement('div');
+    renameWrap.className = 'char-tag-rename-wrap';
+    const renameInput = document.createElement('input');
+    renameInput.className = 'char-rename-input';
+    renameInput.type = 'text';
+    renameInput.value = c.name;
+    renameInput.onmousedown = e => e.stopPropagation();
+    renameInput.ontouchstart = e => e.stopPropagation();
+    renameInput.onkeydown = e => {
       e.stopPropagation();
-      e.preventDefault();
-      modalEditChars.splice(i, 1);
-      renderModalEditChars();
+      if (e.key === 'Enter') applyModalRename(tag, i);
+      if (e.key === 'Escape') cancelModalRename(tag);
     };
-    tag.appendChild(delBtn);
+    const renameOk = document.createElement('button');
+    renameOk.className = 'char-rename-ok';
+    renameOk.textContent = '확인';
+    renameOk.onmousedown = e => { e.stopPropagation(); e.preventDefault(); applyModalRename(tag, i); };
+    renameOk.ontouchend = e => { e.stopPropagation(); e.preventDefault(); applyModalRename(tag, i); };
+    renameWrap.appendChild(renameInput);
+    renameWrap.appendChild(renameOk);
+    tag.appendChild(renameWrap);
 
-    // 마우스 올리면 삭제버튼 표시, 벗어나면 3초 후 숨김
-    let hideTimer = null;
-    tag.addEventListener('mouseenter', () => {
-      clearTimeout(hideTimer);
-      delBtn.classList.add('visible');
-    });
+    // 액션 팝업 (수정 + 삭제)
+    const actions = document.createElement('div');
+    actions.className = 'char-tag-actions';
+
+    const editActionBtn = document.createElement('button');
+    editActionBtn.className = 'tag-action-btn rename';
+    editActionBtn.textContent = '수정';
+    editActionBtn.onmousedown = e => { e.stopPropagation(); e.preventDefault(); startModalRename(tag, renameInput, c.name); };
+    editActionBtn.ontouchend = e => { e.stopPropagation(); e.preventDefault(); startModalRename(tag, renameInput, c.name); };
+
+    const delActionBtn = document.createElement('button');
+    delActionBtn.className = 'tag-action-btn delete';
+    delActionBtn.textContent = '삭제';
+    delActionBtn.onmousedown = e => { e.stopPropagation(); e.preventDefault(); modalEditChars.splice(i, 1); renderModalEditChars(); };
+    delActionBtn.ontouchend = e => { e.stopPropagation(); e.preventDefault(); modalEditChars.splice(i, 1); renderModalEditChars(); };
+
+    actions.appendChild(editActionBtn);
+    actions.appendChild(delActionBtn);
+    tag.appendChild(actions);
+
+    // hover → 팝업 표시 / 모바일 탭
+    tag.addEventListener('mouseenter', () => tag.classList.add('show-actions'));
     tag.addEventListener('mouseleave', () => {
-      hideTimer = setTimeout(() => delBtn.classList.remove('visible'), 3000);
+      setTimeout(() => {
+        if (!tag.querySelector('.char-tag-rename-wrap.active')) tag.classList.remove('show-actions');
+      }, 2500);
     });
-    delBtn.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-    delBtn.addEventListener('mouseleave', () => {
-      hideTimer = setTimeout(() => delBtn.classList.remove('visible'), 3000);
-    });
+    tag.addEventListener('touchstart', e => {
+      if (tag.querySelector('.char-tag-rename-wrap.active')) return;
+      e.stopPropagation();
+      tag.classList.toggle('show-actions');
+    }, { passive: true });
 
     makeModalTagDraggable(tag, quadWrap, i);
     quadWrap.appendChild(tag);
@@ -2375,6 +2420,31 @@ function renderModalEditChars() {
   ).join('');
 }
 
+function startModalRename(tag, input, currentName) {
+  tag.classList.add('show-actions');
+  tag.querySelector('.char-name-span').style.display = 'none';
+  tag.querySelector('.char-tag-rename-wrap').classList.add('active');
+  input.value = currentName;
+  input.focus();
+  input.select();
+}
+
+function applyModalRename(tag, idx) {
+  const input = tag.querySelector('.char-rename-input');
+  const newName = input.value.trim();
+  if (!newName) { toast('이름을 입력해주세요!'); return; }
+  modalEditChars[idx].name = newName;
+  tag.querySelector('.char-name-span').textContent = newName;
+  cancelModalRename(tag);
+  toast(newName + ' 수정됨');
+}
+
+function cancelModalRename(tag) {
+  tag.classList.remove('show-actions');
+  tag.querySelector('.char-name-span').style.display = '';
+  tag.querySelector('.char-tag-rename-wrap').classList.remove('active');
+}
+
 function makeModalTagDraggable(el, container, idx) {
   let ox, oy, startL, startT;
   const startDrag = (cx, cy) => {
@@ -2383,14 +2453,17 @@ function makeModalTagDraggable(el, container, idx) {
     startL = parseFloat(el.style.left);
     startT = parseFloat(el.style.top);
     const onMove = (mx, my) => {
-      const tagW = el.offsetWidth;
-      const tagH = el.offsetHeight;
-      const maxL = ((rect.width - tagW) / rect.width) * 100;
-      const maxT = ((rect.height - tagH) / rect.height) * 100;
+      // 태그는 transform: translate(-50%,-50%) → 중앙 기준
+      const tagHalfW = el.offsetWidth / 2;
+      const tagHalfH = el.offsetHeight / 2;
+      const minL = (tagHalfW / rect.width) * 100;
+      const maxL = ((rect.width - tagHalfW) / rect.width) * 100;
+      const minT = (tagHalfH / rect.height) * 100;
+      const maxT = ((rect.height - tagHalfH) / rect.height) * 100;
       const dx = ((mx - ox) / rect.width) * 100;
       const dy = ((my - oy) / rect.height) * 100;
-      const newL = Math.min(maxL, Math.max(0, startL + dx));
-      const newT = Math.min(maxT, Math.max(0, startT + dy));
+      const newL = Math.min(maxL, Math.max(minL, startL + dx));
+      const newT = Math.min(maxT, Math.max(minT, startT + dy));
       el.style.left = newL + '%';
       el.style.top  = newT + '%';
       modalEditChars[idx].x = newL;
@@ -2576,7 +2649,9 @@ function checkDeleteInput() {
 }
 
 function finalDelete() {
-  const key = saved[viewingIdx]._key || saved[viewingIdx].id;
+  const s = saved[viewingIdx];
+  if (!s) return;
+  const key = s._key || String(s.id);
   removeFromFirebase(key);
   closeModal();
   toast('삭제되었습니다');
