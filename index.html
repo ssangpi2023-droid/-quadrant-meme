@@ -1,0 +1,2671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사분면 이메레스 — 야어커 전용</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, push, remove, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AlzaSyCV5gcaPnOA8LkZYwOCX_n975v4qeCNaOM",
+    authDomain: "quadrant-meme.firebaseapp.com",
+    databaseURL: "https://quadrant-meme-default-rtdb.firebaseio.com",
+    projectId: "quadrant-meme",
+    storageBucket: "quadrant-meme.firebasestorage.app",
+    messagingSenderId: "790134211533",
+    appId: "1:790134211533:web:10e4a362de2b30671a3a84",
+    measurementId: "G-E8MGMHB132"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const postsRef = ref(db, 'imerres/posts');
+
+  window._db = db;
+  window._postsRef = postsRef;
+  window._dbRef = ref;
+  window._dbPush = push;
+  window._dbRemove = remove;
+  window._dbSet = set;
+
+  onValue(postsRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data) {
+      window.saved = [];
+    } else {
+      window.saved = Object.entries(data)
+        .map(([key, val]) => ({ ...val, _key: key }))
+        .sort((a, b) => b.id - a.id);
+    }
+    if (typeof window.renderGallery === 'function') window.renderGallery();
+  });
+</script>
+<style>
+:root {
+  --cream: #F0FAFE;
+  --ink: #0A1F2E;
+  --ink-soft: #1A3A50;
+  --ink-muted: #4A7A96;
+  --ink-faint: #90BDD0;
+  --accent: #04D0FE;
+  --accent-light: #D0F5FF;
+  --accent-mid: #02AACC;
+  --accent-dark: #0199BB;
+  --blue: #04D0FE;
+  --blue-light: #D0F5FF;
+  --surface: #FFFFFF;
+  --border: rgba(4,208,254,0.18);
+  --border-strong: rgba(4,208,254,0.35);
+  --shadow: 0 2px 12px rgba(4,208,254,0.10);
+  --shadow-lg: 0 8px 32px rgba(4,208,254,0.15);
+  --radius: 6px;
+  --radius-lg: 12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  background-color: #EBF5FF;
+  min-height: 100vh;
+  line-height: 1.6;
+  color: var(--ink);
+  position: relative;
+}
+
+/* 배경 땡땡이 패턴 + 중앙 글로우 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #EBF5FF;
+  background-image:
+    radial-gradient(ellipse 65% 50% at 50% 45%, rgba(120,195,255,0.42) 0%, rgba(180,225,255,0.15) 50%, transparent 75%),
+    radial-gradient(ellipse 35% 28% at 50% 45%, rgba(160,215,255,0.3) 0%, transparent 60%),
+    radial-gradient(circle, rgba(255,255,255,0.8) 2px, transparent 2px);
+  background-size: auto, auto, 24px 24px;
+  background-position: center, center, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat;
+}
+
+body > * { position: relative; z-index: 1; }
+
+/* ── HERO TITLE ── */
+.hero {
+  text-align: center;
+  padding: 72px 20px 64px;
+}
+
+.hero h1 {
+  font-family: 'Nanum Myeongjo', serif;
+  font-size: clamp(40px, 8vw, 80px);
+  font-weight: 700;
+  color: #04D0FE;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+
+.hero p {
+  font-size: clamp(13px, 2vw, 15px);
+  color: var(--ink-muted);
+  letter-spacing: 0.8px;
+}
+
+/* ── LAYOUT ── */
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+/* ── CARD ── */
+.card {
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(4,208,254,0.2);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 16px rgba(4,208,254,0.08);
+}
+
+.card-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+}
+
+/* ── INPUTS ── */
+input[type="text"], textarea {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 10px 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+input[type="text"]:focus, textarea:focus {
+  border-color: #04D0FE;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(4,208,254,0.15);
+}
+input[type="text"]::placeholder, textarea::placeholder {
+  color: var(--ink-muted);
+}
+
+/* ── CHARACTER ROW ── */
+.char-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.char-row input { flex: 1; }
+
+/* ── BUTTONS ── */
+.btn {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--ink-soft);
+}
+.btn-ghost:hover { background: var(--cream); border-color: var(--ink-muted); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #0199BB; }
+
+.btn-blue {
+  background: #04D0FE;
+  border-color: #04D0FE;
+  color: #fff;
+  font-size: 14px;
+  padding: 11px 22px;
+}
+.btn-blue:hover { background: #0199BB; }
+
+.btn-danger {
+  background: transparent;
+  border-color: #E05A5A;
+  color: #E05A5A;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+.btn-danger:hover { background: rgba(224,90,90,0.1); }
+
+/* ── QUADRANT OUTER LAYOUT ── */
+.quad-layout {
+  display: grid;
+  grid-template-columns: 130px 1fr 130px;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.quadrant-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 2.5px solid #04D0FE;
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+  user-select: none;
+  grid-column: 2;
+  grid-row: 2;
+}
+.axis-line {
+  position: absolute;
+  background: #04D0FE;
+  pointer-events: none;
+}
+.axis-h { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); }
+.axis-v { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); }
+.quad-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #0199BB;
+  pointer-events: none;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── 입력 패널 ── */
+.q-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.q-panel.top    { grid-column: 2; grid-row: 1; }
+.q-panel.bottom { grid-column: 2; grid-row: 3; }
+.q-panel.left   { grid-column: 1; grid-row: 2; }
+.q-panel.right  { grid-column: 3; grid-row: 2; }
+.quad-corner    { grid-column: 1; grid-row: 1; }
+.quad-corner2   { grid-column: 3; grid-row: 1; }
+.quad-corner3   { grid-column: 1; grid-row: 3; }
+.quad-corner4   { grid-column: 3; grid-row: 3; }
+
+.q-dir-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+/* 표시 텍스트 */
+.q-display {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  text-align: center;
+  word-break: break-all;
+  word-wrap: break-word;
+  width: 100%;
+  min-height: 18px;
+}
+.q-display.empty { color: var(--ink-faint); font-size: 12px; font-style: italic; }
+
+/* 편집 영역 */
+.q-editor { display: none; flex-direction: column; gap: 5px; width: 100%; }
+.q-editor.active { display: flex; }
+
+.q-textarea {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #04D0FE;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  outline: none;
+  resize: none;
+  width: 100%;
+  min-height: 68px;
+  line-height: 1.55;
+}
+.q-textarea::placeholder { color: var(--ink-faint); }
+
+.q-btn-row { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
+.q-btn {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.q-btn.edit  { background: transparent; border-color: var(--border-strong); color: var(--ink-muted); }
+.q-btn.edit:hover  { background: var(--cream); border-color: var(--ink-muted); }
+.q-btn.done  { background: #04D0FE; color: #fff; }
+.q-btn.done:hover  { background: #0199BB; }
+.q-btn.cancel { background: transparent; border-color: var(--border-strong); color: var(--ink-muted); }
+.q-btn.cancel:hover { background: var(--cream); }
+
+/* ── CHAR TAGS ── */
+.char-tag {
+  position: absolute;
+  z-index: 10;
+  font-family: 'Pretendard', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 20px;
+  padding: 3px 10px;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,100,140,0.25), 0 1px 3px rgba(0,80,120,0.15);
+  transition: box-shadow 0.15s;
+}
+.char-tag .char-name-span {
+  white-space: nowrap;
+}
+.char-tag:active { cursor: grabbing; box-shadow: 0 4px 12px rgba(0,100,140,0.35), 0 2px 5px rgba(0,80,120,0.2); }
+.char-tag.pinned { box-shadow: 0 2px 8px rgba(0,100,140,0.25), 0 1px 3px rgba(0,80,120,0.15); }
+
+/* 태그 위에 떠오르는 액션 버튼 행 */
+.char-tag-actions {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  background: var(--ink);
+  border-radius: 8px;
+  padding: 4px 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  z-index: 20;
+  box-shadow: 0 3px 10px rgba(4,208,254,0.25);
+}
+/* 말풍선 꼬리 */
+.char-tag-actions::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+}
+.char-tag:hover .char-tag-actions,
+.char-tag.show-actions .char-tag-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.tag-action-btn {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.tag-action-btn.rename {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+.tag-action-btn.rename:hover { background: rgba(255,255,255,0.28); }
+.tag-action-btn.delete {
+  background: rgba(224,90,90,0.8);
+  color: #fff;
+}
+.tag-action-btn.delete:hover { background: #E05A5A; }
+
+/* 이름 수정 인라인 input */
+.char-tag-rename-wrap {
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+.char-tag-rename-wrap.active { display: flex; }
+.char-rename-input {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  background: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 1px 7px;
+  outline: none;
+  width: 80px;
+}
+.char-rename-ok {
+  font-size: 10px;
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+.char-rename-ok:hover { background: rgba(255,255,255,0.4); }
+
+.pin-btn {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 10px;
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.pin-btn:hover { background: rgba(255,255,255,0.4); }
+
+/* ── 학년 탭 ── */
+.grade-tab {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.grade-tab:hover { border-color: #04D0FE; color: #04D0FE; }
+.grade-tab.active {
+  background: #04D0FE;
+  border-color: #04D0FE;
+  color: #fff;
+  font-weight: 600;
+}
+.grade-char-btn {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(4,208,254,0.4);
+  background: rgba(4,208,254,0.08);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.grade-char-btn:hover {
+  background: #04D0FE;
+  border-color: #04D0FE;
+  color: #fff;
+}
+
+/* ── 색상 휠 피커 ── */
+.color-picker-wrap {
+  margin-top: 14px;
+}
+.color-picker-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+}
+.color-wheel-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.wheel-canvas-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+#wheelCanvas {
+  display: block;
+  border-radius: 50%;
+  cursor: crosshair;
+}
+.wheel-cursor {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.3);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  top: 50%; left: 50%;
+}
+.wheel-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 120px;
+}
+/* 밝기 슬라이더 */
+.brightness-wrap { display: flex; flex-direction: column; gap: 5px; }
+.brightness-label { font-size: 11px; color: var(--ink-muted); }
+#brightnessSlider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+}
+#brightnessSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,0.3);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+/* 미리보기 */
+.color-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--cream);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.color-preview-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.color-preview-hex {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-family: 'Pretendard', monospace;
+}
+
+/* ── ACTION ROW ── */
+.action-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.author-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.author-row label {
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.author-row input {
+  width: 120px;
+  padding: 8px 11px;
+  font-size: 13px;
+}
+
+/* ── GALLERY ── */
+.gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.gallery-header h2 {
+  font-family: 'Nanum Myeongjo', serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+.gallery-count {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.gallery-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.gallery-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-strong);
+}
+
+.gallery-thumb {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  aspect-ratio: 1/1;
+  border-bottom: 1px solid var(--border);
+}
+.gallery-thumb-cell {
+  border-right: 1px solid #04D0FE;
+  border-bottom: 1px solid #04D0FE;
+  padding: 8px;
+  font-size: 9.5px;
+  color: #0A2A3E;
+  overflow: hidden;
+  line-height: 1.4;
+  word-break: break-all;
+}
+.gallery-thumb-cell:nth-child(2),
+.gallery-thumb-cell:nth-child(4) { border-right: none; }
+.gallery-thumb-cell:nth-child(3),
+.gallery-thumb-cell:nth-child(4) { border-bottom: none; }
+
+.gallery-meta {
+  padding: 10px 12px;
+}
+.gallery-meta-theme {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0A2A3E;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+.gallery-meta-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.gallery-meta-author {
+  font-size: 11px;
+  color: #1A4A6A;
+}
+.gallery-meta-date {
+  font-size: 10px;
+  color: #2A6A8A;
+}
+
+.gallery-empty {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--ink-muted);
+}
+.gallery-empty p:first-child { font-size: 32px; margin-bottom: 10px; }
+.gallery-empty p:last-child { font-size: 13px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,30,50,0.55);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(4,208,254,0.25);
+  padding: 24px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalIn 0.2s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.modal-theme {
+  font-family: 'Nanum Myeongjo', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.modal-author {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--ink-muted);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.modal-close-btn:hover { background: var(--cream); }
+
+/* ── 모달 사분면 레이아웃 ── */
+.modal-quad-layout {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  grid-template-rows: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.modal-quad-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1/1;
+  border: 2.5px solid #04D0FE;
+  border-radius: var(--radius);
+  background: #fff;
+  grid-column: 2;
+  grid-row: 2;
+  overflow: hidden;
+}
+.modal-axis-h {
+  position: absolute;
+  top: 50%; left: 0; right: 0;
+  height: 2px;
+  background: #04D0FE;
+  pointer-events: none;
+}
+.modal-axis-v {
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 2px;
+  background: #04D0FE;
+  pointer-events: none;
+}
+.modal-center-dot {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #0199BB;
+  pointer-events: none;
+  z-index: 2;
+}
+.modal-panel {
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  text-align: center;
+  word-break: break-all;
+}
+.modal-panel.top    { grid-column: 2; grid-row: 1; }
+.modal-panel.bottom { grid-column: 2; grid-row: 3; }
+.modal-panel.left   { grid-column: 1; grid-row: 2; }
+.modal-panel.right  { grid-column: 3; grid-row: 2; }
+.modal-panel.empty  { color: var(--ink-faint); font-style: italic; }
+/* 모달 캐릭터 태그 */
+.modal-char-tag {
+  position: absolute;
+  font-size: 8px;
+  font-weight: 600;
+  color: #fff;
+  border-radius: 20px;
+  padding: 1px 6px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  z-index: 5;
+}
+.modal-char-tag.editable {
+  pointer-events: auto;
+  cursor: grab;
+}
+.modal-char-tag .m-del-btn {
+  display: none;
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #E05A5A;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 9px;
+  padding: 2px 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  pointer-events: auto;
+  z-index: 30;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.modal-char-tag.editable .m-del-btn.visible { display: block; }
+.modal-cell-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+
+.modal-chars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.modal-char-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--blue);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--ink);
+  color: var(--cream);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 30px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 999;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── DIVIDER ── */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 16px;
+  color: #0A2A3E;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.section-divider::before, .section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #0A2A3E;
+  opacity: 0.3;
+}
+
+/* ── 모바일 반응형 ── */
+@media (max-width: 640px) {
+  .hero { padding: 40px 16px 32px; }
+  .hero h1 { font-size: clamp(32px, 10vw, 52px); }
+
+  .page { padding: 0 12px 60px; }
+  .card { padding: 14px; }
+
+  /* 사분면 레이아웃 - 모바일 컴팩트 */
+  .quad-layout {
+    grid-template-columns: 55px 1fr 55px;
+    grid-template-rows: auto 1fr auto;
+    gap: 3px;
+  }
+  .quad-corner, .quad-corner2, .quad-corner3, .quad-corner4 { display: none; }
+  .q-panel.top    { grid-column: 2; grid-row: 1; }
+  .quadrant-wrap  { grid-column: 2; grid-row: 2; max-width: 100%; }
+  .q-panel.bottom { grid-column: 2; grid-row: 3; }
+  .q-panel.left   { grid-column: 1; grid-row: 2; }
+  .q-panel.right  { grid-column: 3; grid-row: 2; }
+
+  /* 패널 텍스트·버튼 전체 작게 */
+  .q-display { font-size: 10px; line-height: 1.4; }
+  .q-display.empty { font-size: 9px; }
+  .q-btn { font-size: 10px; padding: 4px 8px; }
+  .q-textarea { font-size: 11px; min-height: 50px; }
+
+  /* 모바일 일괄편집 버튼 표시 */
+  .mobile-edit-all-btn { display: block !important; }
+  /* 모바일에서 개별 수정 버튼 숨김 (일괄편집 사용) */
+  .q-panel .q-btn-row { display: none; }
+  .q-editor.active { display: none !important; }
+  .char-name-span { font-size: 9px; }
+  .pin-btn { font-size: 8px; padding: 1px 4px; }
+
+  /* 색상 휠 */
+  .color-wheel-row { flex-direction: column; align-items: center; }
+  #wheelCanvas { width: 140px !important; height: 140px !important; }
+
+  /* 버튼 */
+  .action-row { flex-direction: column; gap: 8px; align-items: stretch; }
+  .btn-blue { text-align: center; }
+
+  /* 갤러리 */
+  .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* 모달 */
+  .modal { padding: 16px; max-height: 95vh; }
+  .modal-quad-layout {
+    grid-template-columns: 50px 1fr 50px;
+    gap: 4px;
+  }
+  .modal-panel { font-size: 9px; }
+
+  /* 본인확인 */
+  .verify-box {
+    padding: 18px 16px;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .verify-title { font-size: 18px; margin-bottom: 6px; }
+  .verify-badge { font-size: 11px; padding: 4px 12px; margin-bottom: 10px; }
+  .verify-desc { font-size: 12px; margin-bottom: 10px; }
+  .verify-field { margin-bottom: 10px; }
+  .verify-field label { font-size: 11px; margin-bottom: 4px; }
+  .verify-field input,
+  .verify-field select { padding: 8px 10px; font-size: 13px; }
+  .verify-btn { padding: 10px; font-size: 13px; border-radius: 10px; }
+  .verify-error { font-size: 11px; }
+
+  /* char-tag hover → tap으로 대체 (모바일) */
+  .char-tag-actions { opacity: 0; pointer-events: none; }
+  .char-tag.show-actions .char-tag-actions { opacity: 1; pointer-events: auto; }
+
+  /* 수정/완료 버튼 크게 */
+  .q-btn { font-size: 13px; padding: 8px 16px; }
+
+  /* 학년 탭 */
+  .grade-tab { font-size: 11px; padding: 5px 10px; }
+}
+
+@media (max-width: 400px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 28px; }
+}
+
+/* ── 본인확인 오버레이 ── */
+.verify-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: #EBF5FF;
+  background-image:
+    radial-gradient(ellipse 65% 50% at 50% 45%, rgba(120,195,255,0.42) 0%, transparent 75%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='14' cy='14' r='2.5' fill='rgba(255,255,255,0.75)'/%3E%3C/svg%3E");
+  background-size: auto, 28px 28px;
+  background-repeat: no-repeat, repeat;
+  background-position: center, 0 0;
+}
+.verify-box {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(4,208,254,0.3);
+  border-radius: 20px;
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 40px rgba(4,208,254,0.15), 0 2px 12px rgba(0,80,140,0.1);
+  text-align: center;
+  animation: modalIn 0.3s ease;
+}
+.verify-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #0199BB;
+  background: rgba(4,208,254,0.12);
+  border: 1px solid rgba(4,208,254,0.3);
+  border-radius: 20px;
+  padding: 4px 14px;
+  margin-bottom: 16px;
+}
+.verify-title {
+  font-family: 'Nanum Myeongjo', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #04D0FE;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.verify-desc {
+  font-size: 13px;
+  color: #2A6A8A;
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+.verify-desc strong {
+  color: #0199BB;
+  font-weight: 600;
+}
+.verify-field {
+  text-align: left;
+  margin-bottom: 14px;
+}
+.verify-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #1A4A6A;
+  margin-bottom: 6px;
+}
+.verify-field input,
+.verify-field select {
+  width: 100%;
+  font-size: 14px;
+  font-family: 'Pretendard', sans-serif;
+  padding: 10px 13px;
+  border: 1.5px solid rgba(4,208,254,0.35);
+  border-radius: 10px;
+  background: rgba(240,252,255,0.7);
+  color: #0A1F2E;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.verify-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230199BB' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  padding-right: 36px;
+}
+.verify-field input:focus, .verify-field select:focus {
+  border-color: #04D0FE;
+  box-shadow: 0 0 0 3px rgba(4,208,254,0.15);
+  background: #fff;
+}
+.verify-field input::placeholder { color: #90BDD0; }
+.verify-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  font-family: 'Pretendard', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #04D0FE;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: 0.3px;
+}
+.verify-btn:hover { background: #0199BB; }
+.verify-btn:active { transform: scale(0.98); }
+.verify-error {
+  font-size: 12px;
+  color: #E05A5A;
+  margin-top: 10px;
+  min-height: 18px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<!-- ── 본인확인 팝업 ── -->
+<div class="verify-overlay" id="verifyOverlay">
+  <div class="verify-box">
+    <div class="verify-badge">오너 본인확인</div>
+    <div class="verify-title">야마자키 학원,<br>여름축제 시작합니다!</div>
+    <div class="verify-desc">
+      자캐커뮤니티의 <strong>[오너방]</strong>에 계신<br>오너분들을 기준으로 본인확인을 진행합니다.
+    </div>
+    <div style="margin-bottom:16px; padding:10px 14px; background:rgba(4,208,254,0.08); border:1px solid rgba(4,208,254,0.3); border-radius:8px; font-size:12px; color:#0A6E8A; text-align:center;">
+      ⚠️ 본인 캐릭터가 아닌 타인의 캐릭터로 입장하지 말아주세요.
+    </div>
+    <div class="verify-field">
+      <label>비밀번호</label>
+      <input type="password" id="verifyPassword" placeholder="비밀번호를 입력해주세요">
+    </div>
+    <div class="verify-field">
+      <label>본인 캐릭터의 이름 (성+이름 포함)</label>
+      <input type="text" id="verifyName" placeholder="">
+    </div>
+    <div class="verify-field">
+      <label>본인 캐릭터의 학년</label>
+      <select id="verifyGrade">
+        <option value="">— 학년을 선택해주세요 —</option>
+        <option value="1">1학년</option>
+        <option value="2">2학년</option>
+        <option value="3">3학년</option>
+      </select>
+    </div>
+    <div class="verify-field">
+      <label>본인 캐릭터의 동아리</label>
+      <select id="verifyClub">
+        <option value="">— 동아리를 선택해주세요 —</option>
+        <option value="양키부">양키부</option>
+        <option value="밴드부">밴드부</option>
+        <option value="과학부">과학부</option>
+        <option value="배구부">배구부</option>
+        <option value="귀가부">귀가부</option>
+        <option value="검도부">검도부</option>
+        <option value="미술부">미술부</option>
+        <option value="방송부">방송부</option>
+        <option value="선도부">선도부</option>
+        <option value="바이크라이딩부">바이크라이딩부</option>
+        <option value="수영부">수영부</option>
+        <option value="연극부">연극부</option>
+        <option value="도서부">도서부</option>
+        <option value="애니 감상부">애니 감상부</option>
+        <option value="다이어리꾸미기부">다이어리꾸미기부</option>
+        <option value="연애편지 대필부">연애편지 대필부</option>
+        <option value="대리고백부">대리고백부</option>
+        <option value="미용부">미용부</option>
+        <option value="궁도부">궁도부</option>
+        <option value="심리상담부">심리상담부</option>
+        <option value="농구부">농구부</option>
+        <option value="음식연구부">음식연구부</option>
+        <option value="사진부">사진부</option>
+        <option value="신문부">신문부</option>
+        <option value="학생회장">학생회장</option>
+      </select>
+    </div>
+    <div class="verify-error" id="verifyError"></div>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <input type="checkbox" id="verifySave" style="width:16px; height:16px; accent-color:#04D0FE; cursor:pointer;">
+      <label for="verifySave" style="font-size:12px; color:var(--ink-muted); cursor:pointer;">내 정보 저장하기</label>
+    </div>
+    <button class="verify-btn" onclick="submitVerify()">입장하기</button>
+  </div>
+</div>
+
+<div class="hero">
+  <h1>사분면 이메레스</h1>
+  <p>야여커 전용 · 자캐 사분면 메이커</p>
+</div>
+
+<div class="page">
+
+  <!-- 테마 -->
+  <div class="card">
+    <div class="card-label" style="text-align:center;">테마 / 주제 설정</div>
+    <div id="theme-display-row" style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <span id="theme-disp" style="font-size:20px; color:var(--ink-faint); font-style:italic; text-align:center; font-family:'Nanum Myeongjo',serif;">테마를 설정해주세요</span>
+      <button class="q-btn edit" onclick="startThemeEdit()">수정</button>
+    </div>
+    <div id="theme-edit-row" style="display:none; flex-direction:column; gap:8px; margin-top:2px;">
+      <input type="text" id="themeInput" placeholder="예) 내 캐릭터의 말투, 좋아하는 장르, 전투 스타일, 좋아하는 음식..." style="text-align:center; font-size:16px;">
+      <div style="display:flex; gap:6px; justify-content:center;">
+        <button class="q-btn cancel" onclick="cancelThemeEdit()">취소</button>
+        <button class="q-btn done" onclick="doneThemeEdit()">완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 캐릭터 추가 -->
+  <div class="card">
+    <div class="card-label">캐릭터 추가</div>
+    <div class="char-row">
+      <input type="text" id="charNameInput" placeholder="캐릭터 이름 입력...">
+      <button class="btn btn-ghost" onclick="addCharacter()">+ 추가</button>
+    </div>
+
+    <div class="color-picker-wrap">
+      <div class="color-picker-label">태그 색상 선택</div>
+      <div class="color-wheel-row">
+        <div class="wheel-canvas-wrap">
+          <canvas id="wheelCanvas" width="160" height="160"></canvas>
+          <div class="wheel-cursor" id="wheelCursor"></div>
+        </div>
+        <div class="wheel-right">
+          <div class="brightness-wrap">
+            <div class="brightness-label">밝기</div>
+            <input type="range" id="brightnessSlider" min="0" max="100" value="100">
+          </div>
+          <div class="color-preview">
+            <div class="color-preview-dot" id="colorPreviewDot"></div>
+            <span class="color-preview-hex" id="colorPreviewHex">#C84B31</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px; font-size:11.5px; color:var(--ink-muted); line-height:1.7;">
+      📝 이 편집 공간은 <strong>나에게만 보여요.</strong> 완료 &amp; 저장을 눌러야 갤러리에 공개됩니다.<br>
+      💡 이미 저장된 사분면에 캐릭터를 추가하려면, 갤러리에서 해당 사분면을 클릭 → <strong>[캐릭터 추가 / 삭제하기]</strong>를 이용해주세요.
+    </div>
+  </div>
+
+  <!-- 사분면 -->
+  <div class="card quad-card" style="padding: 16px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <div class="card-label" style="margin-bottom:0;">사분면 편집</div>
+      <button class="btn btn-ghost mobile-edit-all-btn" onclick="openMobileEditAll()" style="font-size:12px; padding:6px 12px; display:none;">내용 수정</button>
+    </div>
+
+    <!-- 모바일 일괄편집 패널 -->
+    <div id="mobileEditAllPanel" style="display:none; margin-bottom:14px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <div>
+          <div style="font-size:10px; color:var(--ink-muted); margin-bottom:4px; text-align:center;">상단</div>
+          <textarea class="q-textarea" id="mob-q1" placeholder="상단 내용..." rows="3" style="min-height:60px; font-size:12px;"></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px; color:var(--ink-muted); margin-bottom:4px; text-align:center;">우측</div>
+          <textarea class="q-textarea" id="mob-q2" placeholder="우측 내용..." rows="3" style="min-height:60px; font-size:12px;"></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px; color:var(--ink-muted); margin-bottom:4px; text-align:center;">좌측</div>
+          <textarea class="q-textarea" id="mob-q4" placeholder="좌측 내용..." rows="3" style="min-height:60px; font-size:12px;"></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px; color:var(--ink-muted); margin-bottom:4px; text-align:center;">하단</div>
+          <textarea class="q-textarea" id="mob-q3" placeholder="하단 내용..." rows="3" style="min-height:60px; font-size:12px;"></textarea>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; justify-content:flex-end;">
+        <button class="q-btn cancel" onclick="closeMobileEditAll()">취소</button>
+        <button class="q-btn done" onclick="saveMobileEditAll()">완료</button>
+      </div>
+    </div>
+
+    <div class="quad-layout">
+      <!-- 코너 빈칸 -->
+      <div class="quad-corner"></div>
+
+      <!-- 상단 패널 (반응1) -->
+      <div class="q-panel top" id="panel-q1">
+        <div class="q-display empty" id="disp-q1">내용을 입력해주세요</div>
+        <div class="q-editor" id="edit-q1">
+          <textarea class="q-textarea" id="q1" placeholder="상단 내용 입력..." rows="3"></textarea>
+          <div class="q-btn-row">
+            <button class="q-btn cancel" onclick="cancelEdit('q1')">취소</button>
+            <button class="q-btn done" onclick="doneEdit('q1')">완료</button>
+          </div>
+        </div>
+        <div class="q-btn-row" id="editbtn-q1">
+          <button class="q-btn edit" onclick="startEdit('q1')">수정</button>
+        </div>
+      </div>
+
+      <!-- 코너 빈칸 -->
+      <div class="quad-corner2"></div>
+
+      <!-- 좌측 패널 (반응4) -->
+      <div class="q-panel left" id="panel-q4">
+        <div class="q-display empty" id="disp-q4">내용을 입력해주세요</div>
+        <div class="q-editor" id="edit-q4">
+          <textarea class="q-textarea" id="q4" placeholder="좌측 내용 입력..." rows="3"></textarea>
+          <div class="q-btn-row">
+            <button class="q-btn cancel" onclick="cancelEdit('q4')">취소</button>
+            <button class="q-btn done" onclick="doneEdit('q4')">완료</button>
+          </div>
+        </div>
+        <div class="q-btn-row" id="editbtn-q4">
+          <button class="q-btn edit" onclick="startEdit('q4')">수정</button>
+        </div>
+      </div>
+
+      <!-- 사분면 본체 -->
+      <div class="quadrant-wrap" id="quadrantWrap">
+        <div class="axis-line axis-h"></div>
+        <div class="axis-line axis-v"></div>
+        <div class="quad-center-dot"></div>
+        <div id="charLayer"></div>
+      </div>
+
+      <!-- 우측 패널 (반응2) -->
+      <div class="q-panel right" id="panel-q2">
+        <div class="q-display empty" id="disp-q2">내용을 입력해주세요</div>
+        <div class="q-editor" id="edit-q2">
+          <textarea class="q-textarea" id="q2" placeholder="우측 내용 입력..." rows="3"></textarea>
+          <div class="q-btn-row">
+            <button class="q-btn cancel" onclick="cancelEdit('q2')">취소</button>
+            <button class="q-btn done" onclick="doneEdit('q2')">완료</button>
+          </div>
+        </div>
+        <div class="q-btn-row" id="editbtn-q2">
+          <button class="q-btn edit" onclick="startEdit('q2')">수정</button>
+        </div>
+      </div>
+
+      <!-- 코너 빈칸 -->
+      <div class="quad-corner3"></div>
+
+      <!-- 하단 패널 (반응3) -->
+      <div class="q-panel bottom" id="panel-q3">
+        <div class="q-btn-row" id="editbtn-q3">
+          <button class="q-btn edit" onclick="startEdit('q3')">수정</button>
+        </div>
+        <div class="q-display empty" id="disp-q3">내용을 입력해주세요</div>
+        <div class="q-editor" id="edit-q3">
+          <textarea class="q-textarea" id="q3" placeholder="하단 내용 입력..." rows="3"></textarea>
+          <div class="q-btn-row">
+            <button class="q-btn cancel" onclick="cancelEdit('q3')">취소</button>
+            <button class="q-btn done" onclick="doneEdit('q3')">완료</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 코너 빈칸 -->
+      <div class="quad-corner4"></div>
+    </div>
+  </div>
+
+  <!-- 저장 -->
+  <div class="card">
+    <div class="action-row">
+      <div style="font-size:13px; color:var(--ink-muted);">
+        작성자: <strong id="authorDisplay" style="color:var(--ink);"></strong>
+      </div>
+      <button class="btn btn-blue" onclick="saveCurrent()">완료 &amp; 저장 →</button>
+    </div>
+    <div style="margin-top:12px;">
+      <input type="text" id="descInput" placeholder="사분면에 대한 간단한 설명 (선택사항)" style="width:100%; font-size:13px;">
+    </div>
+    <div style="margin-top:8px; font-size:11.5px; color:var(--ink-muted);">
+      저장하면 공유된 사분면에 공개됩니다. 저장 전까지는 나에게만 보여요.
+    </div>
+  </div>
+
+  <div class="section-divider">갤러리</div>
+
+  <!-- 갤러리 -->
+  <div class="card">
+    <div class="gallery-header">
+      <h2>공유된 사분면 보기</h2>
+      <span class="gallery-count" id="galleryCount">0개</span>
+    </div>
+    <div class="gallery-grid" id="galleryGrid">
+      <div class="gallery-empty">
+        <p>✦</p>
+        <p>아직 저장된 사분면이 없어요.<br>첫 번째 사분면을 만들어보세요!</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- 상세 모달 -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-theme" id="modalTheme"></div>
+        <div class="modal-author" id="modalAuthor"></div>
+        <div id="modalDesc" style="display:none; font-size:12px; color:#2A6A8A; margin-top:5px; font-style:italic;"></div>
+      </div>
+      <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- 사분면 -->
+    <div class="modal-quad-layout">
+      <div></div>
+      <div class="modal-panel top" id="modal-q1"></div>
+      <div></div>
+      <div class="modal-panel left" id="modal-q4"></div>
+      <div class="modal-quad-wrap" id="modalQuadWrap">
+        <div class="modal-axis-h"></div>
+        <div class="modal-axis-v"></div>
+        <div class="modal-center-dot"></div>
+      </div>
+      <div class="modal-panel right" id="modal-q2"></div>
+      <div></div>
+      <div class="modal-panel bottom" id="modal-q3"></div>
+      <div></div>
+    </div>
+
+    <div id="modalChars" style="display:none;"></div>
+
+    <!-- 기본 푸터 -->
+    <div id="modalFooter" style="margin-top:14px;"></div>
+
+    <!-- 3단계 삭제 확인 -->
+    <div id="deletePanel" style="display:none; margin-top:12px; padding:14px; background:var(--cream); border-radius:var(--radius); border:1px solid var(--border);">
+      <div id="deleteStep1" style="display:none;">
+        <p style="font-size:14px; font-weight:600; color:var(--ink); margin-bottom:12px;">정말 삭제하시겠습니까?</p>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button class="q-btn cancel" onclick="resetDeletePanel()">취소</button>
+          <button class="btn btn-danger" style="font-size:12px; padding:6px 16px;" onclick="deleteStep2()">삭제</button>
+        </div>
+      </div>
+      <div id="deleteStep2" style="display:none;">
+        <p style="font-size:12px; color:var(--ink-muted); margin-bottom:6px;">보여지는 글을 똑같이 작성해주세요</p>
+        <p style="font-size:14px; font-weight:700; color:var(--accent); font-family:'Nanum Myeongjo',serif; margin-bottom:10px; text-align:center; padding:10px; background:var(--accent-light); border-radius:var(--radius);">공유된 사분면을 삭제합니다</p>
+        <input type="text" id="deleteConfirmInput" placeholder="위 문장을 그대로 입력해주세요..."
+          style="width:100%; margin-bottom:10px; font-size:13px;"
+          oninput="checkDeleteInput()">
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button class="q-btn cancel" onclick="resetDeletePanel()">취소</button>
+          <button class="btn btn-danger" id="finalDeleteBtn" style="font-size:12px; padding:6px 16px; opacity:0.4; cursor:not-allowed;" disabled onclick="finalDelete()">삭제하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 캐릭터 추가/삭제 수정 패널 -->
+    <div id="modalEditPanel" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+      <div class="card-label" style="margin-bottom:8px;">캐릭터 추가</div>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+        <input type="text" id="modalCharNameInput" placeholder="캐릭터 이름 입력..." style="flex:1; font-size:13px; padding:8px 10px;">
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="addModalCharacter()">+ 추가</button>
+      </div>
+      <div class="color-picker-label">태그 색상</div>
+      <div class="color-wheel-row" style="margin-bottom:10px;">
+        <div class="wheel-canvas-wrap">
+          <canvas id="modalWheelCanvas" width="120" height="120"></canvas>
+          <div class="wheel-cursor" id="modalWheelCursor"></div>
+        </div>
+        <div class="wheel-right">
+          <div class="brightness-wrap">
+            <div class="brightness-label">밝기</div>
+            <input type="range" id="modalBrightnessSlider" min="0" max="100" value="100">
+          </div>
+          <div class="color-preview">
+            <div class="color-preview-dot" id="modalColorPreviewDot"></div>
+            <span class="color-preview-hex" id="modalColorPreviewHex">#C84B31</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button class="q-btn cancel" onclick="cancelModalEdit()">취소</button>
+        <button class="q-btn done" onclick="saveModalEdit()">저장하기</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── STATE ── */
+let characters = [];
+let saved = [];
+let viewingIdx = null;
+let currentUser = ''; // 본인확인한 캐릭터 이름
+
+/* ── 색상 휠 피커 ── */
+let selectedColor = { hex: '#04D0FE' };
+let wheelHue = 0, wheelSat = 0.8, wheelBri = 100;
+
+function initColorWheel() {
+  const canvas = document.getElementById('wheelCanvas');
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 1;
+
+  function drawWheel(brightness) {
+    const bri = brightness / 100;
+    const imgData = ctx.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const dx = x - cx, dy = y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > r) { imgData.data[(y * size + x) * 4 + 3] = 0; continue; }
+        const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+        const sat = dist / r;
+        const [rr, gg, bb] = hslToRgb(hue / 360, sat, 0.5 * bri + 0.5 * (1 - sat) * bri);
+        const i = (y * size + x) * 4;
+        imgData.data[i]     = Math.round(rr * 255 * bri);
+        imgData.data[i + 1] = Math.round(gg * 255 * bri);
+        imgData.data[i + 2] = Math.round(bb * 255 * bri);
+        imgData.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) { r = g = b = l; }
+    else {
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    return [r, g, b];
+  }
+  function hue2rgb(p, q, t) {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  }
+
+  function pickColorAt(x, y) {
+    const dx = x - cx, dy = y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    // 원 바깥이면 테두리로 클램핑
+    let clampX = x, clampY = y;
+    if (dist > r) {
+      const angle = Math.atan2(dy, dx);
+      clampX = cx + Math.cos(angle) * r;
+      clampY = cy + Math.sin(angle) * r;
+    }
+    const cdx = clampX - cx, cdy = clampY - cy;
+    const hue = (Math.atan2(cdy, cdx) * 180 / Math.PI + 360) % 360;
+    const sat = Math.min(Math.sqrt(cdx*cdx + cdy*cdy) / r, 1);
+    wheelHue = hue; wheelSat = sat;
+    updateFromWheel(clampX, clampY);
+  }
+
+  function updateFromWheel(cx2, cy2) {
+    // 커서 위치를 원 안으로 클램핑
+    const ddx = cx2 - cx, ddy = cy2 - cy;
+    const ddist = Math.sqrt(ddx*ddx + ddy*ddy);
+    const cursorR = r - 6; // 커서 반지름(6px) 만큼 안쪽으로
+    let finalX = cx2, finalY = cy2;
+    if (ddist > cursorR) {
+      const angle = Math.atan2(ddy, ddx);
+      finalX = cx + Math.cos(angle) * cursorR;
+      finalY = cy + Math.sin(angle) * cursorR;
+    }
+
+    const bri = wheelBri / 100;
+    const [rr, gg, bb] = hslToRgb(wheelHue / 360, wheelSat, 0.5 * bri + 0.5 * (1 - wheelSat) * bri);
+    const hex = rgbToHex(
+      Math.round(rr * 255 * bri),
+      Math.round(gg * 255 * bri),
+      Math.round(bb * 255 * bri)
+    );
+    selectedColor = { hex };
+    document.getElementById('colorPreviewDot').style.background = hex;
+    document.getElementById('colorPreviewHex').textContent = hex.toUpperCase();
+    const baseHex = getHueColor(wheelHue, wheelSat);
+    document.getElementById('brightnessSlider').style.background =
+      `linear-gradient(to right, #000, ${baseHex})`;
+    const cursor = document.getElementById('wheelCursor');
+    cursor.style.left = finalX + 'px';
+    cursor.style.top  = finalY + 'px';
+    cursor.style.borderColor = isDark(hex) ? '#fff' : '#333';
+  }
+
+  function getHueColor(h, s) {
+    const bri = 1;
+    const [rr, gg, bb] = hslToRgb(h / 360, s, 0.5);
+    return rgbToHex(Math.round(rr * 255), Math.round(gg * 255), Math.round(bb * 255));
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+
+  function isDark(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
+  }
+
+  // 초기 그리기
+  drawWheel(wheelBri);
+  // 초기 커서 위치 (hue=0, sat=0.8 기준)
+  const initAngle = 0 * Math.PI / 180;
+  const initDist = wheelSat * r;
+  const initX = cx + Math.cos(initAngle) * initDist;
+  const initY = cy + Math.sin(initAngle) * initDist;
+  updateFromWheel(initX, initY);
+
+  // 마우스 이벤트
+  let dragging = false;
+  canvas.addEventListener('mousedown', e => {
+    dragging = true;
+    const rect = canvas.getBoundingClientRect();
+    pickColorAt(e.clientX - rect.left, e.clientY - rect.top);
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    pickColorAt(e.clientX - rect.left, e.clientY - rect.top);
+  });
+  window.addEventListener('mouseup', () => dragging = false);
+
+  // 터치 이벤트
+  canvas.addEventListener('touchstart', e => {
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches[0];
+    pickColorAt(t.clientX - rect.left, t.clientY - rect.top);
+  }, { passive: true });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches[0];
+    pickColorAt(t.clientX - rect.left, t.clientY - rect.top);
+  }, { passive: false });
+
+  // 밝기 슬라이더
+  const slider = document.getElementById('brightnessSlider');
+  slider.addEventListener('input', () => {
+    wheelBri = parseInt(slider.value);
+    drawWheel(wheelBri);
+    // 현재 각도/거리로 색상 재계산
+    const angle = wheelHue * Math.PI / 180;
+    const dist2 = wheelSat * r;
+    const px = cx + Math.cos(angle) * dist2;
+    const py = cy + Math.sin(angle) * dist2;
+    updateFromWheel(px, py);
+  });
+}
+
+/* ── STORAGE (localStorage) ── */
+const STORAGE_KEY = 'imerres_v2';
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    saved = raw ? JSON.parse(raw) : [];
+  } catch(e) { saved = []; }
+}
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+}
+
+function pushToFirebase(entry) {
+  if (window._dbPush && window._postsRef) {
+    window._dbPush(window._postsRef, entry);
+  } else {
+    // Firebase 미연결시 localStorage 폴백
+    saved.unshift(entry);
+    persist();
+    renderGallery();
+  }
+}
+
+function removeFromFirebase(key) {
+  if (window._dbRef && window._db && window._dbRemove) {
+    window._dbRemove(window._dbRef(window._db, 'imerres/posts/' + key));
+  } else {
+    const idx = saved.findIndex(s => s._key === key || s.id === key);
+    if (idx !== -1) saved.splice(idx, 1);
+    persist();
+    renderGallery();
+  }
+}
+
+/* ── TOAST ── */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ── 테마 편집 ── */
+let themeValue = '';
+
+function startThemeEdit() {
+  document.getElementById('theme-display-row').style.display = 'none';
+  const editRow = document.getElementById('theme-edit-row');
+  editRow.style.display = 'flex';
+  const inp = document.getElementById('themeInput');
+  inp.value = themeValue;
+  inp.focus();
+}
+
+function doneThemeEdit() {
+  const val = document.getElementById('themeInput').value.trim();
+  themeValue = val;
+  const disp = document.getElementById('theme-disp');
+  if (val) {
+    disp.textContent = val;
+    disp.style.color = '#04D0FE';
+    disp.style.fontStyle = 'normal';
+    disp.style.fontSize = '20px';
+  } else {
+    disp.textContent = '테마를 설정해주세요';
+    disp.style.color = 'var(--ink-faint)';
+    disp.style.fontStyle = 'italic';
+    disp.style.fontSize = '20px';
+  }
+  document.getElementById('theme-edit-row').style.display = 'none';
+  document.getElementById('theme-display-row').style.display = 'flex';
+}
+
+function cancelThemeEdit() {
+  document.getElementById('themeInput').value = themeValue;
+  document.getElementById('theme-edit-row').style.display = 'none';
+  document.getElementById('theme-display-row').style.display = 'flex';
+}
+
+/* ── 학년별 캐릭터 데이터 ── */
+const GRADE_CHARS = {
+  1: ['아마네 하루','코모리 히키','나가하라 유우','네코야마 하루토','에가미 타카메','이루마 쿠쿄','쿠루미 하야토','토리이 아에루','후지시로 미오','미즈하라 코하네'],
+  2: ['이토 키사키','시라누이 리츠엔카','고토 아에','코이시 이오','소와시타 하나','토키와 히요리','츠바키 레오','에모리 코지','시즈미 미나토','아나비 쇼메','쿠로사와 케이','키리사키 유우','시라사키 유나','칸자키 히로토','히미카 호시에','시라이시 유마','후지 아키코'],
+  3: ['스미카와 하루카','미야노 료코','시노자키 미츠루','키시마 코우키','카제 신','나카시로 호노타','미노베 르야','시노미야 유리','가와사키 아사히','유키나가 요이즈키','이타누키 유이','카토 유토','킨류 요우이치','킨류 타다시','햣카 비젠','후코코 유지']
+};
+
+let currentGrade = 0;
+
+function selectGrade(grade) {
+  currentGrade = grade;
+  document.querySelectorAll('.grade-tab').forEach(t => {
+    t.classList.toggle('active', parseInt(t.dataset.grade) === grade);
+  });
+  if (grade === 0) {
+    document.getElementById('inputDirect').style.display = 'block';
+    document.getElementById('inputGrade').style.display = 'none';
+  } else {
+    document.getElementById('inputDirect').style.display = 'none';
+    document.getElementById('inputGrade').style.display = 'block';
+    const list = document.getElementById('gradeCharList');
+    list.innerHTML = GRADE_CHARS[grade].map(name =>
+      `<button class="grade-char-btn" onclick="addCharacterByName('${name}')">${name}</button>`
+    ).join('');
+  }
+}
+
+function addCharacterByName(name) {
+  const color = selectedColor ? selectedColor.hex : '#04D0FE';
+  createCharTag(name, 20 + Math.random() * 60, 20 + Math.random() * 60, color);
+  characters.push({ name, x: 0, y: 0, pinned: false, color });
+  toast(name + ' 추가됨!');
+}
+function addCharacter() {
+  const inp = document.getElementById('charNameInput');
+  const name = inp.value.trim();
+  if (!name) { toast('캐릭터 이름을 입력해주세요!'); return; }
+  inp.value = '';
+  const color = selectedColor ? selectedColor.hex : '#04D0FE';
+  createCharTag(name, 20 + Math.random() * 60, 20 + Math.random() * 60, color);
+  characters.push({ name, x: 0, y: 0, pinned: false, color });
+}
+
+/* ── 밝기 기반 텍스트 색상 결정 ── */
+function getTextColor(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  const luminance = (r * 0.299 + g * 0.587 + b * 0.114);
+  return luminance > 128 ? '#1A1612' : '#ffffff';
+}
+
+function createCharTag(name, xPct, yPct, color) {
+  color = color || '#04D0FE';
+  const textColor = getTextColor(color);
+  const wrap = document.getElementById('quadrantWrap');
+  const tag = document.createElement('div');
+  tag.className = 'char-tag';
+  tag.dataset.name = name;
+  tag.dataset.color = color;
+  tag.style.left = xPct + '%';
+  tag.style.top  = yPct + '%';
+  tag.style.background = color;
+  tag.style.color = textColor;
+  tag.style.boxShadow = '0 2px 8px rgba(0,100,140,0.25), 0 1px 3px rgba(0,80,120,0.15)';
+
+  /* ── 호버 액션 팝업 (모바일: 탭으로도 동작) ── */
+  const actions = document.createElement('div');
+  actions.className = 'char-tag-actions';
+
+  const renameBtn = document.createElement('button');
+  renameBtn.className = 'tag-action-btn rename';
+  renameBtn.textContent = '수정';
+  renameBtn.onmousedown = e => { e.stopPropagation(); e.preventDefault(); startRename(tag); };
+  renameBtn.ontouchend = e => { e.stopPropagation(); e.preventDefault(); startRename(tag); };
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'tag-action-btn delete';
+  deleteBtn.textContent = '삭제';
+  deleteBtn.onmousedown = e => { e.stopPropagation(); e.preventDefault(); removeChar(tag); };
+  deleteBtn.ontouchend = e => { e.stopPropagation(); e.preventDefault(); removeChar(tag); };
+
+  actions.appendChild(renameBtn);
+  actions.appendChild(deleteBtn);
+
+  // 모바일: 탭하면 show-actions 토글
+  tag.addEventListener('touchstart', () => {
+    if (tag.querySelector('.char-tag-rename-wrap.active')) return;
+    tag.classList.toggle('show-actions');
+  }, { passive: true });
+
+  /* ── 이름 표시 span ── */
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'char-name-span';
+  nameSpan.textContent = name;
+
+  /* ── 이름 수정 인라인 ── */
+  const renameWrap = document.createElement('div');
+  renameWrap.className = 'char-tag-rename-wrap';
+
+  const renameInput = document.createElement('input');
+  renameInput.className = 'char-rename-input';
+  renameInput.type = 'text';
+  renameInput.value = name;
+  renameInput.onmousedown = e => e.stopPropagation();
+  renameInput.onkeydown = e => {
+    e.stopPropagation();
+    if (e.key === 'Enter') applyRename(tag);
+    if (e.key === 'Escape') cancelRename(tag);
+  };
+
+  const renameOk = document.createElement('button');
+  renameOk.className = 'char-rename-ok';
+  renameOk.textContent = '확인';
+  renameOk.onmousedown = e => { e.stopPropagation(); e.preventDefault(); applyRename(tag); };
+
+  renameWrap.appendChild(renameInput);
+  renameWrap.appendChild(renameOk);
+
+  /* ── 완료(위치고정) 버튼 ── */
+  const pinBtn = document.createElement('button');
+  pinBtn.className = 'pin-btn';
+  pinBtn.textContent = '완료';
+  pinBtn.style.color = textColor;
+  pinBtn.style.background = textColor === '#ffffff' ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.12)';
+  pinBtn.onclick = e => { e.stopPropagation(); pinCharacter(tag); };
+
+  tag.appendChild(actions);
+  tag.appendChild(nameSpan);
+  tag.appendChild(renameWrap);
+  tag.appendChild(pinBtn);
+
+  makeDraggable(tag, wrap);
+  document.getElementById('charLayer').appendChild(tag);
+  return tag;
+}
+
+function startRename(tag) {
+  tag.classList.add('show-actions');
+  const nameSpan = tag.querySelector('.char-name-span');
+  const renameWrap = tag.querySelector('.char-tag-rename-wrap');
+  const renameInput = tag.querySelector('.char-rename-input');
+  nameSpan.style.display = 'none';
+  renameWrap.classList.add('active');
+  renameInput.value = tag.dataset.name;
+  renameInput.focus();
+  renameInput.select();
+}
+
+function applyRename(tag) {
+  const renameInput = tag.querySelector('.char-rename-input');
+  const newName = renameInput.value.trim();
+  if (!newName) { toast('이름을 입력해주세요!'); return; }
+  const oldName = tag.dataset.name;
+  tag.dataset.name = newName;
+  tag.querySelector('.char-name-span').textContent = newName;
+  const idx = characters.findIndex(c => c.name === oldName);
+  if (idx !== -1) characters[idx].name = newName;
+  cancelRename(tag);
+  toast(oldName + ' → ' + newName + ' 수정됨');
+}
+
+function cancelRename(tag) {
+  tag.classList.remove('show-actions');
+  tag.querySelector('.char-name-span').style.display = '';
+  tag.querySelector('.char-tag-rename-wrap').classList.remove('active');
+}
+
+function removeChar(tag) {
+  const name = tag.dataset.name;
+  const idx = characters.findIndex(c => c.name === name);
+  if (idx !== -1) characters.splice(idx, 1);
+  tag.remove();
+  toast(name + ' 삭제됨');
+}
+
+/* ── DRAGGABLE ── */
+function makeDraggable(el, container) {
+  let ox, oy, startL, startT;
+
+  const startDrag = (cx, cy) => {
+    const rect = container.getBoundingClientRect();
+    ox = cx;
+    oy = cy;
+    startL = parseFloat(el.style.left);
+    startT = parseFloat(el.style.top);
+
+    const onMove = (mx, my) => {
+      const tagW = el.offsetWidth;
+      const tagH = el.offsetHeight;
+      const maxL = ((rect.width - tagW) / rect.width) * 100;
+      const maxT = ((rect.height - tagH) / rect.height) * 100;
+      const dx = ((mx - ox) / rect.width) * 100;
+      const dy = ((my - oy) / rect.height) * 100;
+      const newL = Math.min(maxL, Math.max(0, startL + dx));
+      const newT = Math.min(maxT, Math.max(0, startT + dy));
+      el.style.left = newL + '%';
+      el.style.top = newT + '%';
+    };
+
+    const stopDrag = () => {
+      document.removeEventListener('mousemove', mouseMove);
+      document.removeEventListener('mouseup', mouseUp);
+      document.removeEventListener('touchmove', touchMove);
+      document.removeEventListener('touchend', touchEnd);
+      syncCharPos(el);
+    };
+
+    const mouseMove = e => onMove(e.clientX, e.clientY);
+    const mouseUp = stopDrag;
+    const touchMove = e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); };
+    const touchEnd = stopDrag;
+
+    document.addEventListener('mousemove', mouseMove);
+    document.addEventListener('mouseup', mouseUp);
+    document.addEventListener('touchmove', touchMove, { passive: false });
+    document.addEventListener('touchend', touchEnd);
+  };
+
+  el.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('pin-btn')) return;
+    e.preventDefault();
+    startDrag(e.clientX, e.clientY);
+  });
+  el.addEventListener('touchstart', e => {
+    if (e.target.classList.contains('pin-btn')) return;
+    startDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+}
+
+function syncCharPos(el) {
+  const name = el.dataset.name;
+  const idx = characters.findIndex(c => c.name === name);
+  if (idx !== -1) {
+    characters[idx].x = parseFloat(el.style.left);
+    characters[idx].y = parseFloat(el.style.top);
+  }
+}
+
+function pinCharacter(tag) {
+  tag.classList.add('pinned');
+  const btn = tag.querySelector('.pin-btn');
+  if (btn) btn.remove();
+  syncCharPos(tag);
+  const name = tag.dataset.name;
+  const idx = characters.findIndex(c => c.name === name);
+  if (idx !== -1) characters[idx].pinned = true;
+  toast(name + ' 위치 고정됨!');
+}
+
+/* ── 모바일 일괄편집 ── */
+function openMobileEditAll() {
+  document.getElementById('mob-q1').value = qData['q1'] || '';
+  document.getElementById('mob-q2').value = qData['q2'] || '';
+  document.getElementById('mob-q3').value = qData['q3'] || '';
+  document.getElementById('mob-q4').value = qData['q4'] || '';
+  document.getElementById('mobileEditAllPanel').style.display = 'block';
+}
+
+function saveMobileEditAll() {
+  ['q1','q2','q3','q4'].forEach(id => {
+    const val = document.getElementById('mob-' + id).value.trim();
+    qData[id] = val;
+    const disp = document.getElementById('disp-' + id);
+    if (val) {
+      disp.textContent = val;
+      disp.className = 'q-display';
+    } else {
+      disp.textContent = '내용을 입력해주세요';
+      disp.className = 'q-display empty';
+    }
+  });
+  document.getElementById('mobileEditAllPanel').style.display = 'none';
+}
+
+function closeMobileEditAll() {
+  document.getElementById('mobileEditAllPanel').style.display = 'none';
+}
+
+/* ── 패널 편집 상태 관리 ── */
+const qData = { q1: '', q2: '', q3: '', q4: '' };
+
+function startEdit(id) {
+  document.getElementById('edit-' + id).classList.add('active');
+  document.getElementById('editbtn-' + id).style.display = 'none';
+  const ta = document.getElementById(id);
+  ta.value = qData[id];
+  ta.focus();
+}
+
+function cancelEdit(id) {
+  document.getElementById('edit-' + id).classList.remove('active');
+  document.getElementById('editbtn-' + id).style.display = 'flex';
+}
+
+function doneEdit(id) {
+  const ta = document.getElementById(id);
+  const val = ta.value.trim();
+  qData[id] = val;
+  const disp = document.getElementById('disp-' + id);
+  if (val) {
+    disp.textContent = val;
+    disp.className = 'q-display';
+  } else {
+    disp.textContent = '내용을 입력해주세요';
+    disp.className = 'q-display empty';
+  }
+  document.getElementById('edit-' + id).classList.remove('active');
+  document.getElementById('editbtn-' + id).style.display = 'flex';
+}
+
+/* ── 텍스트 읽기 헬퍼 ── */
+function getQ(id) { return qData[id] || ''; }
+
+function saveCurrent() {
+  const theme = themeValue;
+  const author = currentUser || '익명';
+  if (!theme) { toast('테마를 먼저 설정해주세요!'); return; }
+
+  const charTags = Array.from(document.querySelectorAll('.char-tag')).map(el => ({
+    name: el.dataset.name,
+    color: el.dataset.color || '#04D0FE',
+    x: parseFloat(el.style.left),
+    y: parseFloat(el.style.top)
+  }));
+
+  const entry = {
+    id: Date.now(),
+    theme,
+    author,
+    desc: document.getElementById('descInput').value.trim(),
+    q1: getQ('q1'),
+    q2: getQ('q2'),
+    q3: getQ('q3'),
+    q4: getQ('q4'),
+    chars: charTags || [],
+    date: new Date().toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+  };
+
+  pushToFirebase(entry);
+  resetForm();
+  toast('저장 완료! ✦ 갤러리에서 확인하세요');
+}
+
+function resetForm() {
+  themeValue = '';
+  document.getElementById('themeInput').value = '';
+  const disp = document.getElementById('theme-disp');
+  disp.textContent = '테마를 설정해주세요';
+  disp.style.color = 'var(--ink-faint)';
+  disp.style.fontStyle = 'italic';
+  document.getElementById('theme-edit-row').style.display = 'none';
+  document.getElementById('theme-display-row').style.display = 'flex';
+  ['q1','q2','q3','q4'].forEach(id => {
+    qData[id] = '';
+    document.getElementById(id).value = '';
+    const disp = document.getElementById('disp-' + id);
+    disp.textContent = '내용을 입력해주세요';
+    disp.className = 'q-display empty';
+    document.getElementById('edit-' + id).classList.remove('active');
+    document.getElementById('editbtn-' + id).style.display = 'flex';
+  });
+  document.getElementById('charLayer').innerHTML = '';
+  document.getElementById('descInput').value = '';
+  characters = [];
+}
+
+function clearQuadrant() {
+  ['q1','q2','q3','q4'].forEach(id => {
+    qData[id] = '';
+    document.getElementById(id).value = '';
+    const disp = document.getElementById('disp-' + id);
+    disp.textContent = '내용을 입력해주세요';
+    disp.className = 'q-display empty';
+    document.getElementById('edit-' + id).classList.remove('active');
+    document.getElementById('editbtn-' + id).style.display = 'flex';
+  });
+  document.getElementById('charLayer').innerHTML = '';
+  characters = [];
+  toast('사분면을 초기화했어요');
+}
+
+/* ── GALLERY ── */
+function renderGallery() {
+  const grid = document.getElementById('galleryGrid');
+  const count = document.getElementById('galleryCount');
+  count.textContent = saved.length + '개';
+
+  if (saved.length === 0) {
+    grid.innerHTML = `<div class="gallery-empty"><p>✦</p><p>아직 저장된 사분면이 없어요.<br>첫 번째 사분면을 만들어보세요!</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = saved.map((s, i) => `
+    <div class="gallery-item" onclick="openModal(${i})">
+      <div class="gallery-thumb">
+        <div class="gallery-thumb-cell">${esc(s.q1)}</div>
+        <div class="gallery-thumb-cell">${esc(s.q2)}</div>
+        <div class="gallery-thumb-cell">${esc(s.q3)}</div>
+        <div class="gallery-thumb-cell">${esc(s.q4)}</div>
+      </div>
+      <div class="gallery-meta">
+        <div class="gallery-meta-theme">${esc(s.theme)}</div>
+        ${s.desc ? `<div style="font-size:11px; color:#2A6A8A; margin-bottom:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${esc(s.desc)}</div>` : ''}
+        <div class="gallery-meta-bottom">
+          <span class="gallery-meta-author">${esc(s.author)}</span>
+          <span class="gallery-meta-date">${s.date || ''}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── MODAL ── */
+let modalEditColor = { hex: '#04D0FE' };
+let modalWheelHue = 0, modalWheelSat = 0.8, modalWheelBri = 100;
+let modalEditChars = []; // 수정 중 임시 캐릭터 목록
+
+function openModal(idx) {
+  viewingIdx = idx;
+  const s = saved[idx];
+  document.getElementById('modalTheme').textContent = s.theme;
+  document.getElementById('modalAuthor').textContent = s.author + '  ·  ' + (s.date || '');
+  // 설명 표시
+  const descEl = document.getElementById('modalDesc');
+  if (descEl) {
+    descEl.textContent = s.desc || '';
+    descEl.style.display = s.desc ? 'block' : 'none';
+  }
+
+  // 수정 패널 숨기기
+  document.getElementById('modalEditPanel').style.display = 'none';
+
+  // 사분면 텍스트 패널
+  const panels = { q1: 'modal-q1', q2: 'modal-q2', q3: 'modal-q3', q4: 'modal-q4' };
+  Object.entries(panels).forEach(([key, elId]) => {
+    const el = document.getElementById(elId);
+    const val = s[key] || '';
+    if (val) {
+      el.textContent = val;
+      el.className = 'modal-panel ' + (key === 'q1' ? 'top' : key === 'q2' ? 'right' : key === 'q3' ? 'bottom' : 'left');
+    } else {
+      el.textContent = '—';
+      el.className = 'modal-panel empty ' + (key === 'q1' ? 'top' : key === 'q2' ? 'right' : key === 'q3' ? 'bottom' : 'left');
+    }
+  });
+
+  renderModalChars(s.chars || []);
+
+  // 푸터: 수정하기 + 삭제 버튼
+  const footer = document.getElementById('modalFooter');
+  const editBtn = `<button class="q-btn edit" onclick="enterModalEditMode(${idx})">캐릭터 추가 / 삭제하기</button>`;
+  const delBtn = s.author === currentUser
+    ? `<button class="btn btn-danger" style="font-size:12px;padding:6px 14px;" onclick="deleteStep1()">이 사분면 삭제</button>`
+    : '';
+  footer.innerHTML = `<div style="display:flex;gap:8px;justify-content:flex-end;">${editBtn}${delBtn}</div>`;
+  resetDeletePanel();
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function renderModalChars(chars) {
+  // 사분면 안 태그
+  const quadWrap = document.getElementById('modalQuadWrap');
+  Array.from(quadWrap.querySelectorAll('.modal-char-tag')).forEach(el => el.remove());
+  chars.forEach(c => {
+    const tag = document.createElement('div');
+    tag.className = 'modal-char-tag';
+    tag.textContent = c.name;
+    tag.style.background = c.color || '#04D0FE';
+    tag.style.color = getTextColor(c.color || '#04D0FE');
+    tag.style.left = (c.x || 50) + '%';
+    tag.style.top  = (c.y || 50) + '%';
+    quadWrap.appendChild(tag);
+  });
+
+  // 하단 목록
+  const charsEl = document.getElementById('modalChars');
+  if (chars.length > 0) {
+    charsEl.innerHTML = chars.map(c =>
+      `<span class="modal-char-pill" style="background:${c.color || '#04D0FE'}">${esc(c.name)}</span>`
+    ).join('');
+  } else {
+    charsEl.innerHTML = '';
+  }
+}
+
+function enterModalEditMode(idx) {
+  viewingIdx = idx;
+  const s = saved[idx];
+  modalEditChars = JSON.parse(JSON.stringify(s.chars || []));
+
+  document.getElementById('modalEditPanel').style.display = 'block';
+  document.getElementById('modalFooter').style.display = 'none';
+  document.getElementById('deletePanel').style.display = 'none';
+  document.getElementById('modalCharNameInput').value = '';
+
+  renderModalEditChars();
+
+  if (!document.getElementById('modalWheelCanvas')._initialized) {
+    initModalColorWheel();
+    document.getElementById('modalWheelCanvas')._initialized = true;
+  }
+}
+
+function renderModalEditChars() {
+  const quadWrap = document.getElementById('modalQuadWrap');
+  Array.from(quadWrap.querySelectorAll('.modal-char-tag')).forEach(el => el.remove());
+  modalEditChars.forEach((c, i) => {
+    const tag = document.createElement('div');
+    tag.className = 'modal-char-tag editable';
+    tag.style.background = c.color || '#04D0FE';
+    tag.style.color = getTextColor(c.color || '#04D0FE');
+    tag.style.left = (c.x || 50) + '%';
+    tag.style.top  = (c.y || 50) + '%';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = c.name;
+    tag.appendChild(nameSpan);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'm-del-btn';
+    delBtn.textContent = '삭제';
+    delBtn.onmousedown = e => {
+      e.stopPropagation();
+      e.preventDefault();
+      modalEditChars.splice(i, 1);
+      renderModalEditChars();
+    };
+    tag.appendChild(delBtn);
+
+    // 마우스 올리면 삭제버튼 표시, 벗어나면 3초 후 숨김
+    let hideTimer = null;
+    tag.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimer);
+      delBtn.classList.add('visible');
+    });
+    tag.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => delBtn.classList.remove('visible'), 3000);
+    });
+    delBtn.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    delBtn.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => delBtn.classList.remove('visible'), 3000);
+    });
+
+    makeModalTagDraggable(tag, quadWrap, i);
+    quadWrap.appendChild(tag);
+  });
+
+  const charsEl = document.getElementById('modalChars');
+  charsEl.innerHTML = modalEditChars.map(c =>
+    `<span class="modal-char-pill" style="background:${c.color || '#04D0FE'}">${esc(c.name)}</span>`
+  ).join('');
+}
+
+function makeModalTagDraggable(el, container, idx) {
+  let ox, oy, startL, startT;
+  const startDrag = (cx, cy) => {
+    const rect = container.getBoundingClientRect();
+    ox = cx; oy = cy;
+    startL = parseFloat(el.style.left);
+    startT = parseFloat(el.style.top);
+    const onMove = (mx, my) => {
+      const tagW = el.offsetWidth;
+      const tagH = el.offsetHeight;
+      const maxL = ((rect.width - tagW) / rect.width) * 100;
+      const maxT = ((rect.height - tagH) / rect.height) * 100;
+      const dx = ((mx - ox) / rect.width) * 100;
+      const dy = ((my - oy) / rect.height) * 100;
+      const newL = Math.min(maxL, Math.max(0, startL + dx));
+      const newT = Math.min(maxT, Math.max(0, startT + dy));
+      el.style.left = newL + '%';
+      el.style.top  = newT + '%';
+      modalEditChars[idx].x = newL;
+      modalEditChars[idx].y = newT;
+    };
+    const stopDrag = () => {
+      document.removeEventListener('mousemove', mm);
+      document.removeEventListener('mouseup', mu);
+      document.removeEventListener('touchmove', tm);
+      document.removeEventListener('touchend', tu);
+    };
+    const mm = e => onMove(e.clientX, e.clientY);
+    const mu = stopDrag;
+    const tm = e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); };
+    const tu = stopDrag;
+    document.addEventListener('mousemove', mm);
+    document.addEventListener('mouseup', mu);
+    document.addEventListener('touchmove', tm, { passive: false });
+    document.addEventListener('touchend', tu);
+  };
+  el.addEventListener('mousedown', e => { e.preventDefault(); startDrag(e.clientX, e.clientY); });
+  el.addEventListener('touchstart', e => startDrag(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+}
+
+function addModalCharacter() {
+  const inp = document.getElementById('modalCharNameInput');
+  const name = inp.value.trim();
+  if (!name) { toast('이름을 입력해주세요!'); return; }
+  inp.value = '';
+  const color = modalEditColor.hex;
+  const x = 20 + Math.random() * 60;
+  const y = 20 + Math.random() * 60;
+  modalEditChars.push({ name, color, x, y });
+  renderModalEditChars();
+}
+
+function saveModalEdit() {
+  const s = saved[viewingIdx];
+  s.chars = JSON.parse(JSON.stringify(modalEditChars));
+  if (window._dbRef && window._db && window._dbSet && s._key) {
+    const entryToSave = { ...s };
+    delete entryToSave._key;
+    window._dbSet(window._dbRef(window._db, 'imerres/posts/' + s._key), entryToSave);
+  } else {
+    persist();
+    renderGallery();
+  }
+  document.getElementById('modalEditPanel').style.display = 'none';
+  document.getElementById('modalFooter').style.display = '';
+  renderModalChars(s.chars);
+  toast('저장됐어요! ✦');
+}
+
+function cancelModalEdit() {
+  document.getElementById('modalEditPanel').style.display = 'none';
+  document.getElementById('modalFooter').style.display = '';
+  renderModalChars(saved[viewingIdx].chars || []);
+}
+
+/* ── 모달 색상 휠 ── */
+function initModalColorWheel() {
+  const canvas = document.getElementById('modalWheelCanvas');
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 1;
+
+  function hslToRgb(h, s, l) {
+    let rr, gg, bb;
+    if (s === 0) { rr = gg = bb = l; }
+    else {
+      const q = l < 0.5 ? l*(1+s) : l+s-l*s, p = 2*l-q;
+      rr = h2r(p,q,h+1/3); gg = h2r(p,q,h); bb = h2r(p,q,h-1/3);
+    }
+    return [rr,gg,bb];
+  }
+  function h2r(p,q,t) {
+    if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6)return p+(q-p)*6*t;
+    if(t<1/2)return q;
+    if(t<2/3)return p+(q-p)*(2/3-t)*6;
+    return p;
+  }
+  function rgbToHex(r,g,b){ return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); }
+  function isDark(hex){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return (r*0.299+g*0.587+b*0.114)<128;
+  }
+
+  function drawWheel(bri) {
+    const b = bri/100;
+    const imgData = ctx.createImageData(size,size);
+    for(let y=0;y<size;y++){
+      for(let x=0;x<size;x++){
+        const dx=x-cx,dy=y-cy,dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist>r){imgData.data[(y*size+x)*4+3]=0;continue;}
+        const hue=(Math.atan2(dy,dx)*180/Math.PI+360)%360;
+        const sat=dist/r;
+        const [rr,gg,bb]=hslToRgb(hue/360,sat,0.5*b+0.5*(1-sat)*b);
+        const i=(y*size+x)*4;
+        imgData.data[i]=Math.round(rr*255*b);
+        imgData.data[i+1]=Math.round(gg*255*b);
+        imgData.data[i+2]=Math.round(bb*255*b);
+        imgData.data[i+3]=255;
+      }
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+
+  function updateColor(px, py) {
+    const dx=px-cx, dy=py-cy, dist=Math.sqrt(dx*dx+dy*dy);
+    let cpx=px, cpy=py;
+    if(dist>r) {
+      const angle=Math.atan2(dy,dx);
+      cpx=cx+Math.cos(angle)*r;
+      cpy=cy+Math.sin(angle)*r;
+    }
+    const cdx=cpx-cx, cdy=cpy-cy;
+    modalWheelHue=(Math.atan2(cdy,cdx)*180/Math.PI+360)%360;
+    modalWheelSat=Math.min(Math.sqrt(cdx*cdx+cdy*cdy)/r,1);
+    const b=modalWheelBri/100;
+    const [rr,gg,bb]=hslToRgb(modalWheelHue/360,modalWheelSat,0.5*b+0.5*(1-modalWheelSat)*b);
+    const hex=rgbToHex(Math.round(rr*255*b),Math.round(gg*255*b),Math.round(bb*255*b));
+    modalEditColor={hex};
+    document.getElementById('modalColorPreviewDot').style.background=hex;
+    document.getElementById('modalColorPreviewHex').textContent=hex.toUpperCase();
+    // 커서 위치 클램핑 (커서 반지름 5px 만큼 안쪽)
+    const cursorR = r - 5;
+    const cdist = Math.sqrt(cdx*cdx+cdy*cdy);
+    let fcx=cpx, fcy=cpy;
+    if(cdist > cursorR) {
+      const a=Math.atan2(cdy,cdx);
+      fcx=cx+Math.cos(a)*cursorR;
+      fcy=cy+Math.sin(a)*cursorR;
+    }
+    const cursor=document.getElementById('modalWheelCursor');
+    cursor.style.left=fcx+'px'; cursor.style.top=fcy+'px';
+    cursor.style.borderColor=isDark(hex)?'#fff':'#333';
+  }
+
+  drawWheel(modalWheelBri);
+  const initAngle=0, initDist=modalWheelSat*r;
+  updateColor(cx+Math.cos(initAngle)*initDist, cy+Math.sin(initAngle)*initDist);
+
+  let dragging=false;
+  canvas.addEventListener('mousedown',e=>{dragging=true;const rc=canvas.getBoundingClientRect();updateColor(e.clientX-rc.left,e.clientY-rc.top);});
+  window.addEventListener('mousemove',e=>{if(!dragging)return;const rc=canvas.getBoundingClientRect();updateColor(e.clientX-rc.left,e.clientY-rc.top);});
+  window.addEventListener('mouseup',()=>dragging=false);
+  canvas.addEventListener('touchstart',e=>{const rc=canvas.getBoundingClientRect(),t=e.touches[0];updateColor(t.clientX-rc.left,t.clientY-rc.top);},{passive:true});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();const rc=canvas.getBoundingClientRect(),t=e.touches[0];updateColor(t.clientX-rc.left,t.clientY-rc.top);},{passive:false});
+
+  document.getElementById('modalBrightnessSlider').addEventListener('input',e=>{
+    modalWheelBri=parseInt(e.target.value);
+    drawWheel(modalWheelBri);
+    const angle=modalWheelHue*Math.PI/180,dist2=modalWheelSat*r;
+    updateColor(cx+Math.cos(angle)*dist2, cy+Math.sin(angle)*dist2);
+  });
+}
+
+/* ── 3단계 삭제 확인 ── */
+function deleteStep1() {
+  document.getElementById('deletePanel').style.display = 'block';
+  document.getElementById('deleteStep1').style.display = 'block';
+  document.getElementById('deleteStep2').style.display = 'none';
+}
+
+function deleteStep2() {
+  document.getElementById('deleteStep1').style.display = 'none';
+  document.getElementById('deleteStep2').style.display = 'block';
+  document.getElementById('deleteConfirmInput').value = '';
+  const btn = document.getElementById('finalDeleteBtn');
+  btn.disabled = true;
+  btn.style.opacity = '0.4';
+  btn.style.cursor = 'not-allowed';
+}
+
+function checkDeleteInput() {
+  const val = document.getElementById('deleteConfirmInput').value;
+  const btn = document.getElementById('finalDeleteBtn');
+  const match = val === '공유된 사분면을 삭제합니다';
+  btn.disabled = !match;
+  btn.style.opacity = match ? '1' : '0.4';
+  btn.style.cursor = match ? 'pointer' : 'not-allowed';
+}
+
+function finalDelete() {
+  const key = saved[viewingIdx]._key || saved[viewingIdx].id;
+  removeFromFirebase(key);
+  closeModal();
+  toast('삭제되었습니다');
+}
+
+function resetDeletePanel() {
+  document.getElementById('deletePanel').style.display = 'none';
+  document.getElementById('deleteStep1').style.display = 'none';
+  document.getElementById('deleteStep2').style.display = 'none';
+  if (document.getElementById('deleteConfirmInput')) {
+    document.getElementById('deleteConfirmInput').value = '';
+  }
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+/* ── 본인확인 ── */
+const OWNER_LIST = [
+  ['킨류 요우이치', '3', '양키부'],
+  ['킨류 타다시', '3', '양키부'],
+  ['고토 아에', '2', '양키부'],
+  ['에모리 코지', '2', '양키부'],
+  ['햣카 비젠', '3', '양키부'],
+  ['토키와 히요리', '2', '밴드부'],
+  ['후지 아키코', '2', '밴드부'],
+  ['히미카 호시에', '2', '밴드부'],
+  ['미야노 료코', '3', '과학부'],
+  ['유키나가 요이즈키', '3', '과학부'],
+  ['후코코 유지', '3', '과학부'],
+  ['이토 키사키', '2', '배구부'],
+  ['미노베 르야', '3', '배구부'],
+  ['이타누키 유이', '3', '배구부'],
+  ['에가미 타카메', '1', '귀가부'],
+  ['키시마 코우키', '3', '귀가부'],
+  ['미즈하라 코하네', '1', '귀가부'],
+  ['시라누이 리츠엔카', '2', '검도부'],
+  ['시라이시 유마', '2', '검도부'],
+  ['코이시 이오', '2', '미술부'],
+  ['시노자키 미츠루', '3', '미술부'],
+  ['나가하라 유우', '1', '방송부'],
+  ['키리사키 유우', '2', '방송부'],
+  ['나카시로 호노타', '3', '선도부'],
+  ['쿠루미 하야토', '1', '선도부'],
+  ['칸자키 히로토', '2', '바이크라이딩부'],
+  ['후지시로 미오', '1', '바이크라이딩부'],
+  ['아나비 쇼메', '2', '수영부'],
+  ['시즈미 미나토', '2', '수영부'],
+  ['시라사키 유나', '2', '연극부'],
+  ['아마네 하루', '1', '도서부'],
+  ['코모리 히키', '1', '애니 감상부'],
+  ['소와시타 하나', '2', '다이어리꾸미기부'],
+  ['츠바키 레오', '2', '연애편지 대필부'],
+  ['시노미야 유리', '3', '대리고백부'],
+  ['네코야마 하루토', '1', '미용부'],
+  ['카제 신', '3', '궁도부'],
+  ['쿠로사와 케이', '2', '심리상담부'],
+  ['가와사키 아사히', '3', '농구부'],
+  ['이루마 쿠쿄', '1', '음식연구부'],
+  ['카토 유토', '3', '사진부'],
+  ['토리이 아에루', '1', '신문부'],
+  ['스미카와 하루카', '3', '학생회장'],
+];
+
+function normalizeStr(s) {
+  return s.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function submitVerify() {
+  const pw    = document.getElementById('verifyPassword').value.trim();
+  const name  = document.getElementById('verifyName').value.trim();
+  const grade = document.getElementById('verifyGrade').value;
+  const club  = document.getElementById('verifyClub').value;
+  const save  = document.getElementById('verifySave').checked;
+  const errEl = document.getElementById('verifyError');
+
+  if (!pw)    { errEl.textContent = '비밀번호를 입력해주세요.'; return; }
+  if (pw !== '260207') { errEl.textContent = '비밀번호가 올바르지 않습니다.'; return; }
+  if (!name)  { errEl.textContent = '캐릭터 이름을 입력해주세요.'; return; }
+  if (!grade) { errEl.textContent = '학년을 선택해주세요.'; return; }
+  if (!club)  { errEl.textContent = '동아리를 선택해주세요.'; return; }
+
+  const matched = OWNER_LIST.some(([n, g, c]) =>
+    normalizeStr(n) === normalizeStr(name) && g === grade && c === club
+  );
+
+  if (matched) {
+    currentUser = name;
+    document.getElementById('authorDisplay').textContent = name;
+    if (save) {
+      localStorage.setItem('imerres_auth', JSON.stringify({ pw, name, grade, club }));
+    } else {
+      localStorage.removeItem('imerres_auth');
+    }
+    document.getElementById('verifyOverlay').style.display = 'none';
+    errEl.textContent = '';
+  } else {
+    errEl.textContent = '잘못된 정보입니다. 이름, 학년, 동아리를 다시 확인해주세요.';
+  }
+}
+
+function tryAutoVerify() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('imerres_auth'));
+    if (!saved) return;
+    // 자동 입장 없이 입력값만 복원
+    if (saved.pw)    document.getElementById('verifyPassword').value = saved.pw;
+    if (saved.name)  document.getElementById('verifyName').value = saved.name;
+    if (saved.grade) document.getElementById('verifyGrade').value = saved.grade;
+    if (saved.club)  document.getElementById('verifyClub').value = saved.club;
+    if (saved.pw || saved.name) document.getElementById('verifySave').checked = true;
+  } catch(e) {}
+}
+
+// 엔터키로 입장
+document.addEventListener('DOMContentLoaded', () => {
+  tryAutoVerify();
+  document.getElementById('verifyName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitVerify();
+  });
+  initColorWheel();
+  document.getElementById('charNameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addCharacter();
+  });
+  document.getElementById('modalCharNameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addModalCharacter();
+  });
+  document.getElementById('themeInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doneThemeEdit();
+    if (e.key === 'Escape') cancelThemeEdit();
+  });
+  loadSaved();
+  renderGallery();
+});
+</script>
+</body>
+</html>
