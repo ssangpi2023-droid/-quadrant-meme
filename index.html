@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>사분면 이메레스 — 야어커 전용</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Pretendard:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700&family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, push, remove, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -75,21 +76,22 @@ body {
   position: relative;
 }
 
-/* 배경 땡땡이 패턴 + 중앙 글로우 */
+/* 배경 땡땡이 패턴 + 중앙 글로우 - GPU 최적화 */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
   background-color: #EBF5FF;
   background-image:
-    radial-gradient(ellipse 65% 50% at 50% 45%, rgba(120,195,255,0.42) 0%, rgba(180,225,255,0.15) 50%, transparent 75%),
-    radial-gradient(ellipse 35% 28% at 50% 45%, rgba(160,215,255,0.3) 0%, transparent 60%),
-    radial-gradient(circle, rgba(255,255,255,0.8) 2px, transparent 2px);
-  background-size: auto, auto, 24px 24px;
-  background-position: center, center, 0 0;
-  background-repeat: no-repeat, no-repeat, repeat;
+    radial-gradient(ellipse 65% 50% at 50% 45%, rgba(120,195,255,0.35) 0%, transparent 75%),
+    radial-gradient(circle, rgba(255,255,255,0.75) 2px, transparent 2px);
+  background-size: auto, 24px 24px;
+  background-position: center, 0 0;
+  background-repeat: no-repeat, repeat;
 }
 
 body > * { position: relative; z-index: 1; }
@@ -125,9 +127,7 @@ body > * { position: relative; z-index: 1; }
 
 /* ── CARD ── */
 .card {
-  background: rgba(255,255,255,0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255,255,255,0.95);
   border: 1px solid rgba(4,208,254,0.2);
   border-radius: var(--radius-lg);
   padding: 20px;
@@ -637,6 +637,8 @@ input[type="text"]::placeholder, textarea::placeholder {
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
+  will-change: transform;
+  contain: layout style;
 }
 .gallery-item:hover {
   transform: translateY(-2px);
@@ -715,9 +717,7 @@ input[type="text"]::placeholder, textarea::placeholder {
 .modal-overlay.open { display: flex; }
 
 .modal {
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.98);
   border-radius: var(--radius-lg);
   border: 1px solid rgba(4,208,254,0.25);
   padding: 24px;
@@ -1523,13 +1523,17 @@ let wheelHue = 0, wheelSat = 0.8, wheelBri = 100;
 
 function initColorWheel() {
   const canvas = document.getElementById('wheelCanvas');
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: false });
   const size = canvas.width;
   const cx = size / 2, cy = size / 2, r = size / 2 - 1;
 
-  function drawWheel(brightness) {
-    const bri = brightness / 100;
-    const imgData = ctx.createImageData(size, size);
+  // 기본 휠 이미지를 OffscreenCanvas에 캐싱
+  const offscreen = document.createElement('canvas');
+  offscreen.width = size; offscreen.height = size;
+  const offCtx = offscreen.getContext('2d');
+
+  function buildBaseWheel() {
+    const imgData = offCtx.createImageData(size, size);
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const dx = x - cx, dy = y - cy;
@@ -1537,15 +1541,30 @@ function initColorWheel() {
         if (dist > r) { imgData.data[(y * size + x) * 4 + 3] = 0; continue; }
         const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
         const sat = dist / r;
-        const [rr, gg, bb] = hslToRgb(hue / 360, sat, 0.5 * bri + 0.5 * (1 - sat) * bri);
+        const [rr, gg, bb] = hslToRgb(hue / 360, sat, 0.5 + 0.5 * (1 - sat));
         const i = (y * size + x) * 4;
-        imgData.data[i]     = Math.round(rr * 255 * bri);
-        imgData.data[i + 1] = Math.round(gg * 255 * bri);
-        imgData.data[i + 2] = Math.round(bb * 255 * bri);
+        imgData.data[i]     = Math.round(rr * 255);
+        imgData.data[i + 1] = Math.round(gg * 255);
+        imgData.data[i + 2] = Math.round(bb * 255);
         imgData.data[i + 3] = 255;
       }
     }
-    ctx.putImageData(imgData, 0, 0);
+    offCtx.putImageData(imgData, 0, 0);
+  }
+  buildBaseWheel();
+
+  function drawWheel(brightness) {
+    const bri = brightness / 100;
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(offscreen, 0, 0);
+    if (bri < 1) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgba(0,0,0,${1 - bri})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
   }
 
   function hslToRgb(h, s, l) {
@@ -1959,16 +1978,19 @@ function makeDraggable(el, container) {
     startT = parseFloat(el.style.top);
 
     const onMove = (mx, my) => {
-      const tagW = el.offsetWidth;
-      const tagH = el.offsetHeight;
-      const maxL = ((rect.width - tagW) / rect.width) * 100;
-      const maxT = ((rect.height - tagH) / rect.height) * 100;
-      const dx = ((mx - ox) / rect.width) * 100;
-      const dy = ((my - oy) / rect.height) * 100;
-      const newL = Math.min(maxL, Math.max(0, startL + dx));
-      const newT = Math.min(maxT, Math.max(0, startT + dy));
-      el.style.left = newL + '%';
-      el.style.top = newT + '%';
+      if (onMove._raf) cancelAnimationFrame(onMove._raf);
+      onMove._raf = requestAnimationFrame(() => {
+        const tagW = el.offsetWidth;
+        const tagH = el.offsetHeight;
+        const maxL = ((rect.width - tagW) / rect.width) * 100;
+        const maxT = ((rect.height - tagH) / rect.height) * 100;
+        const dx = ((mx - ox) / rect.width) * 100;
+        const dy = ((my - oy) / rect.height) * 100;
+        const newL = Math.min(maxL, Math.max(0, startL + dx));
+        const newT = Math.min(maxT, Math.max(0, startT + dy));
+        el.style.left = newL + '%';
+        el.style.top = newT + '%';
+      });
     };
 
     const stopDrag = () => {
@@ -2164,8 +2186,12 @@ function renderGallery() {
     return;
   }
 
-  grid.innerHTML = saved.map((s, i) => `
-    <div class="gallery-item" onclick="openModal(${i})">
+  const frag = document.createDocumentFragment();
+  saved.forEach((s, i) => {
+    const item = document.createElement('div');
+    item.className = 'gallery-item';
+    item.onclick = () => openModal(i);
+    item.innerHTML = `
       <div class="gallery-thumb">
         <div class="gallery-thumb-cell">${esc(s.q1)}</div>
         <div class="gallery-thumb-cell">${esc(s.q2)}</div>
@@ -2174,14 +2200,16 @@ function renderGallery() {
       </div>
       <div class="gallery-meta">
         <div class="gallery-meta-theme">${esc(s.theme)}</div>
-        ${s.desc ? `<div style="font-size:11px; color:#2A6A8A; margin-bottom:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${esc(s.desc)}</div>` : ''}
+        ${s.desc ? `<div style="font-size:11px;color:#2A6A8A;margin-bottom:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc(s.desc)}</div>` : ''}
         <div class="gallery-meta-bottom">
           <span class="gallery-meta-author">${esc(s.author)}</span>
           <span class="gallery-meta-date">${s.date || ''}</span>
         </div>
-      </div>
-    </div>
-  `).join('');
+      </div>`;
+    frag.appendChild(item);
+  });
+  grid.innerHTML = '';
+  grid.appendChild(frag);
 }
 
 function esc(str) {
