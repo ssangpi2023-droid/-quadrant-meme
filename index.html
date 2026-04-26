@@ -7,6 +7,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700&family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+// Firebase 데이터 수신용 전역 함수 - 모듈보다 먼저 선언
+window.syncFirebaseData = function(data) {
+  if (typeof saved !== 'undefined') {
+    saved = data;
+    if (typeof renderGallery === 'function') renderGallery();
+  } else {
+    // JS 아직 로드 안됐으면 잠깐 기다렸다가 재시도
+    setTimeout(() => window.syncFirebaseData(data), 300);
+  }
+};
+</script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, push, remove, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -33,15 +45,25 @@
   window._dbRemove = remove;
   window._dbSet = set;
 
-  onValue(postsRef, (snapshot) => {
-    const data = snapshot.val();
-    const newData = !data ? [] : Object.entries(data)
-      .map(([key, val]) => ({ ...val, _key: key }))
-      .sort((a, b) => b.id - a.id);
-    // 전역 saved 배열 업데이트
-    window._firebaseData = newData;
-    if (typeof window.syncFirebaseData === 'function') window.syncFirebaseData(newData);
-  });
+  // DOMContentLoaded 이후에 동기화 시작 (함수 정의 후 실행 보장)
+  function startSync() {
+    onValue(postsRef, (snapshot) => {
+      const data = snapshot.val();
+      const newData = !data ? [] : Object.entries(data)
+        .map(([key, val]) => ({ ...val, _key: key }))
+        .sort((a, b) => b.id - a.id);
+      window._firebaseData = newData;
+      if (typeof window.syncFirebaseData === 'function') {
+        window.syncFirebaseData(newData);
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startSync);
+  } else {
+    startSync();
+  }
 </script>
 <style>
 :root {
@@ -1701,12 +1723,6 @@ function initColorWheel() {
     updateFromWheel(px, py);
   });
 }
-
-/* ── Firebase 동기화 ── */
-window.syncFirebaseData = function(data) {
-  saved = data;
-  renderGallery();
-};
 
 /* ── STORAGE (localStorage) ── */
 const STORAGE_KEY = 'imerres_v2';
