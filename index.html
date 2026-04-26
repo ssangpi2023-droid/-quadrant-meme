@@ -820,7 +820,7 @@ input[type="text"]::placeholder, textarea::placeholder {
   background: #fff;
   grid-column: 2;
   grid-row: 2;
-  overflow: hidden;
+  overflow: visible; /* 태그 팝업이 밖으로 나올 수 있게 */
 }
 .modal-axis-h {
   position: absolute;
@@ -869,7 +869,6 @@ input[type="text"]::placeholder, textarea::placeholder {
   pointer-events: none;
   transform: translate(-50%, -50%);
   white-space: nowrap;
-  overflow: hidden;
   max-width: 100px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   z-index: 5;
@@ -877,26 +876,28 @@ input[type="text"]::placeholder, textarea::placeholder {
 .modal-char-tag.editable {
   pointer-events: auto;
   cursor: grab;
+  overflow: visible; /* 팝업이 밖으로 나올 수 있게 */
 }
-.modal-char-tag .m-del-btn {
-  display: none;
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #E05A5A;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 9px;
-  padding: 2px 7px;
-  cursor: pointer;
-  white-space: nowrap;
+/* 수정/삭제 팝업 - modal 태그용 */
+.modal-char-tag.editable .char-tag-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.modal-char-tag.editable:hover .char-tag-actions,
+.modal-char-tag.editable.show-actions .char-tag-actions {
+  opacity: 1;
   pointer-events: auto;
-  z-index: 30;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-.modal-char-tag.editable .m-del-btn.visible { display: block; }
+/* 이름 수정 wrap - modal 태그용 */
+.modal-char-tag .char-tag-rename-wrap {
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+.modal-char-tag .char-tag-rename-wrap.active {
+  display: flex;
+}
 .modal-cell-label {
   display: block;
   font-size: 10px;
