@@ -674,6 +674,7 @@ input[type="text"]::placeholder, textarea::placeholder {
   grid-template-rows: 1fr 1fr;
   aspect-ratio: 1/1;
   border-bottom: 1px solid var(--border);
+  position: relative; /* 캐릭터 태그 절대 위치용 */
 }
 .gallery-thumb-cell {
   border-right: 1px solid #04D0FE;
@@ -689,6 +690,24 @@ input[type="text"]::placeholder, textarea::placeholder {
 .gallery-thumb-cell:nth-child(4) { border-right: none; }
 .gallery-thumb-cell:nth-child(3),
 .gallery-thumb-cell:nth-child(4) { border-bottom: none; }
+
+/* 썸네일 캐릭터 태그 */
+.gallery-char-tag {
+  position: absolute;
+  font-size: 6px;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0,100,140,0.2);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 5;
+  line-height: 1.4;
+}
 
 .gallery-meta {
   padding: 10px 12px;
@@ -2208,12 +2227,25 @@ function renderGallery() {
     const item = document.createElement('div');
     item.className = 'gallery-item';
     item.onclick = () => openModal(i);
+
+    // 썸네일 캐릭터 태그 HTML 생성
+    let charTagsHtml = '';
+    if (s.chars && s.chars.length > 0) {
+      charTagsHtml = s.chars.map(c => {
+        const x = Math.min(95, Math.max(5, c.x || 50));
+        const y = Math.min(95, Math.max(5, c.y || 50));
+        const textColor = getTextColor(c.color || '#04D0FE');
+        return `<span class="gallery-char-tag" style="left:${x}%;top:${y}%;background:${esc(c.color||'#04D0FE')};color:${textColor};">${esc(c.name)}</span>`;
+      }).join('');
+    }
+
     item.innerHTML = `
       <div class="gallery-thumb">
         <div class="gallery-thumb-cell">${esc(s.q1)}</div>
         <div class="gallery-thumb-cell">${esc(s.q2)}</div>
         <div class="gallery-thumb-cell">${esc(s.q3)}</div>
         <div class="gallery-thumb-cell">${esc(s.q4)}</div>
+        ${charTagsHtml}
       </div>
       <div class="gallery-meta">
         <div class="gallery-meta-theme">${esc(s.theme)}</div>
