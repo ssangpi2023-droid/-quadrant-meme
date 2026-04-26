@@ -1025,10 +1025,9 @@ input[type="text"]::placeholder, textarea::placeholder {
   /* 모바일 일괄편집 */
   .mobile-edit-all-btn { display: block !important; }
 
-  /* 색상 휠 */
-  .color-wheel-row { flex-direction: row; align-items: flex-start; gap: 12px; }
-  #wheelCanvas { width: 130px !important; height: 130px !important; }
-  #modalWheelCanvas { width: 100px !important; height: 100px !important; }
+  /* 색상 휠 - CSS 크기만 지정, JS에서 내부 해상도 자동 맞춤 */
+  #wheelCanvas { width: 130px; height: 130px; }
+  #modalWheelCanvas { width: 100px; height: 100px; }
 
   .action-row { flex-direction: column; gap: 8px; align-items: stretch; }
   .btn-blue { text-align: center; }
@@ -1566,6 +1565,12 @@ let wheelHue = 0, wheelSat = 0.8, wheelBri = 100;
 
 function initColorWheel() {
   const canvas = document.getElementById('wheelCanvas');
+
+  // 실제 렌더 크기에 맞게 캔버스 내부 해상도 조정 (핵심!)
+  const displaySize = canvas.getBoundingClientRect().width || canvas.offsetWidth || 160;
+  canvas.width = displaySize;
+  canvas.height = displaySize;
+
   const ctx = canvas.getContext('2d', { willReadFrequently: false });
   const size = canvas.width;
   const cx = size / 2, cy = size / 2, r = size / 2 - 1;
@@ -1695,9 +1700,17 @@ function initColorWheel() {
     return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
   }
 
+  // 캔버스 내부 해상도 = CSS 크기이므로 단순 offset 계산
+  function getCanvasPos(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  }
+
   // 초기 그리기
   drawWheel(wheelBri);
-  // 초기 커서 위치 (hue=0, sat=0.8 기준)
   const initAngle = 0 * Math.PI / 180;
   const initDist = wheelSat * r;
   const initX = cx + Math.cos(initAngle) * initDist;
@@ -1708,27 +1721,27 @@ function initColorWheel() {
   let dragging = false;
   canvas.addEventListener('mousedown', e => {
     dragging = true;
-    const rect = canvas.getBoundingClientRect();
-    pickColorAt(e.clientX - rect.left, e.clientY - rect.top);
+    const pos = getCanvasPos(e.clientX, e.clientY);
+    pickColorAt(pos.x, pos.y);
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const rect = canvas.getBoundingClientRect();
-    pickColorAt(e.clientX - rect.left, e.clientY - rect.top);
+    const pos = getCanvasPos(e.clientX, e.clientY);
+    pickColorAt(pos.x, pos.y);
   });
   window.addEventListener('mouseup', () => dragging = false);
 
   // 터치 이벤트
   canvas.addEventListener('touchstart', e => {
-    const rect = canvas.getBoundingClientRect();
     const t = e.touches[0];
-    pickColorAt(t.clientX - rect.left, t.clientY - rect.top);
+    const pos = getCanvasPos(t.clientX, t.clientY);
+    pickColorAt(pos.x, pos.y);
   }, { passive: true });
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
     const t = e.touches[0];
-    pickColorAt(t.clientX - rect.left, t.clientY - rect.top);
+    const pos = getCanvasPos(t.clientX, t.clientY);
+    pickColorAt(pos.x, pos.y);
   }, { passive: false });
 
   // 밝기 슬라이더
@@ -2560,6 +2573,12 @@ function cancelModalEdit() {
 /* ── 모달 색상 휠 ── */
 function initModalColorWheel() {
   const canvas = document.getElementById('modalWheelCanvas');
+
+  // 실제 렌더 크기에 맞게 캔버스 내부 해상도 조정
+  const displaySize = canvas.getBoundingClientRect().width || canvas.offsetWidth || 120;
+  canvas.width = displaySize;
+  canvas.height = displaySize;
+
   const ctx = canvas.getContext('2d');
   const size = canvas.width;
   const cx = size / 2, cy = size / 2, r = size / 2 - 1;
@@ -2641,12 +2660,17 @@ function initModalColorWheel() {
   const initAngle=0, initDist=modalWheelSat*r;
   updateColor(cx+Math.cos(initAngle)*initDist, cy+Math.sin(initAngle)*initDist);
 
+  function getModalPos(clientX, clientY) {
+    const rc = canvas.getBoundingClientRect();
+    return { x: clientX - rc.left, y: clientY - rc.top };
+  }
+
   let dragging=false;
-  canvas.addEventListener('mousedown',e=>{dragging=true;const rc=canvas.getBoundingClientRect();updateColor(e.clientX-rc.left,e.clientY-rc.top);});
-  window.addEventListener('mousemove',e=>{if(!dragging)return;const rc=canvas.getBoundingClientRect();updateColor(e.clientX-rc.left,e.clientY-rc.top);});
+  canvas.addEventListener('mousedown',e=>{dragging=true;const p=getModalPos(e.clientX,e.clientY);updateColor(p.x,p.y);});
+  window.addEventListener('mousemove',e=>{if(!dragging)return;const p=getModalPos(e.clientX,e.clientY);updateColor(p.x,p.y);});
   window.addEventListener('mouseup',()=>dragging=false);
-  canvas.addEventListener('touchstart',e=>{const rc=canvas.getBoundingClientRect(),t=e.touches[0];updateColor(t.clientX-rc.left,t.clientY-rc.top);},{passive:true});
-  canvas.addEventListener('touchmove',e=>{e.preventDefault();const rc=canvas.getBoundingClientRect(),t=e.touches[0];updateColor(t.clientX-rc.left,t.clientY-rc.top);},{passive:false});
+  canvas.addEventListener('touchstart',e=>{const t=e.touches[0],p=getModalPos(t.clientX,t.clientY);updateColor(p.x,p.y);},{passive:true});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0],p=getModalPos(t.clientX,t.clientY);updateColor(p.x,p.y);},{passive:false});
 
   document.getElementById('modalBrightnessSlider').addEventListener('input',e=>{
     modalWheelBri=parseInt(e.target.value);
