@@ -34,14 +34,12 @@
 
   onValue(postsRef, (snapshot) => {
     const data = snapshot.val();
-    if (!data) {
-      window.saved = [];
-    } else {
-      window.saved = Object.entries(data)
-        .map(([key, val]) => ({ ...val, _key: key }))
-        .sort((a, b) => b.id - a.id);
-    }
-    if (typeof window.renderGallery === 'function') window.renderGallery();
+    const newData = !data ? [] : Object.entries(data)
+      .map(([key, val]) => ({ ...val, _key: key }))
+      .sort((a, b) => b.id - a.id);
+    // 전역 saved 배열 업데이트
+    window._firebaseData = newData;
+    if (typeof window.syncFirebaseData === 'function') window.syncFirebaseData(newData);
   });
 </script>
 <style>
@@ -1514,6 +1512,7 @@ input[type="text"]::placeholder, textarea::placeholder {
 <script>
 /* ── STATE ── */
 let characters = [];
+window.saved = [];
 let saved = [];
 let viewingIdx = null;
 let currentUser = ''; // 본인확인한 캐릭터 이름
@@ -1683,6 +1682,12 @@ function initColorWheel() {
     updateFromWheel(px, py);
   });
 }
+
+/* ── Firebase 동기화 ── */
+window.syncFirebaseData = function(data) {
+  saved = data;
+  renderGallery();
+};
 
 /* ── STORAGE (localStorage) ── */
 const STORAGE_KEY = 'imerres_v2';
